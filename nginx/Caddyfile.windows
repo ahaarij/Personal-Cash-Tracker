@@ -1,11 +1,7 @@
 # Caddyfile for Windows (no Docker).
-# Caddy listens on port 80 locally. Access the app at http://localhost
-# or http://<server-ip> from other devices on the same network.
-#
-# Adjust CASHFLOW_ROOT below if you put the app somewhere else.
+# Caddy listens on port 8080, tunneled via Cloudflare.
 
 :8080 {
-    # ── Security headers ─────────────────────────────────────────────────
     header {
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         X-Content-Type-Options "nosniff"
@@ -18,38 +14,24 @@
         -X-Powered-By
     }
 
-    # ── Block PocketBase admin UI from public access ──────────────────
-    @admin path /_/*
-    respond @admin 404
-
-    # ── Block debug/health endpoints ──────────────────────────────────
-    @internal path /api/health /metrics /debug/*
-    respond @internal 404
-
-    # ── Proxy API calls to Node.js backend ───────────────────────────
-    @api {
-        path /api/*
-    }
-    reverse_proxy @api 127.0.0.1:3000 {
-        header_up Host {upstream_hostport}
+    # API proxied to Node.js backend — must be before file_server
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3000 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
-    # ── Serve static PWA ──────────────────────────────────────────────
-    # IMPORTANT: update this path to match where you put the app
-    root * C:\cashflow\frontend\dist
-    encode gzip
+    # Static PWA — update path if repo is not at C:\PCT
+    handle {
+        root * C:\PCT\frontend\dist
+        encode gzip
+        try_files {path} /index.html
+        file_server { hide .git }
 
-    try_files {path} /index.html
+        @static path *.js *.css *.woff2 *.woff *.ttf *.svg *.ico *.png *.webp
+        header @static Cache-Control "public, max-age=31536000, immutable"
 
-    file_server {
-        hide .git
+        @html path /index.html /
+        header @html Cache-Control "no-cache, no-store, must-revalidate"
     }
-
-    @static {
-        path *.js *.css *.woff2 *.woff *.ttf *.svg *.ico *.png *.webp
-    }
-    header @static Cache-Control "public, max-age=31536000, immutable"
-
-    @html path /index.html /
-    header @html Cache-Control "no-cache, no-store, must-revalidate"
 }
