@@ -234,11 +234,13 @@ if (-not $cfExe) {
 if ($cfExe) { Write-Info "Using cloudflared: $cfExe" } else { Write-Warn "cloudflared.exe not found — tunnel config will need manual update" }
 
 $cfConfigPaths = @(
-    "$env:USERPROFILE\.cloudflared\config.yml",
+    "C:\ProgramData\cloudflared\config.yml\config.yml",
+    "$env:ProgramData\cloudflared\config.yml\config.yml",
     "$env:ProgramData\cloudflared\config.yml",
+    "$env:USERPROFILE\.cloudflared\config.yml",
     (Split-Path $cfExe -Parent) + "\config.yml"
 )
-$cfConfig = $cfConfigPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+$cfConfig = $cfConfigPaths | Where-Object { (Test-Path $_) -and (-not (Get-Item $_ -ErrorAction SilentlyContinue).PSIsContainer) } | Select-Object -First 1
 
 if (-not $AppSubdomain -and $APP_URL) {
     $AppSubdomain = ([System.Uri]$APP_URL).Host
