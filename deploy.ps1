@@ -5,34 +5,29 @@
 # Run once for first deploy. For updates use: .\update.ps1
 # Must be run as Administrator.
 #
-# Prerequisites installed automatically via Chocolatey:
-#   Node.js, PostgreSQL, Caddy, NSSM
-#
 # Usage:
-#   Right-click PowerShell → "Run as Administrator"
-#   cd C:\CashFlow\repo
+#   Right-click PowerShell -> "Run as Administrator"
+#   cd C:\PCT
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-#   .\deploy.ps1
+#   .\deploy.ps1 -AppSubdomain "cashflow.cred-desk.com"
 
 param(
-    [string]$RepoPath    = $PSScriptRoot,
-    [string]$AppSubdomain = "",          # e.g. cashflow  (will be cashflow.cred-desk.com)
-    [int]$CaddyPort      = 8080,
-    [int]$BackendPort    = 3000
+    [string]$RepoPath     = $PSScriptRoot,
+    [string]$AppSubdomain = "",
+    [int]$CaddyPort       = 8080,
+    [int]$BackendPort     = 3000
 )
 
 $ErrorActionPreference = "Stop"
 
-function Write-Info  { Write-Host "[deploy] $args" -ForegroundColor Cyan }
-function Write-Ok    { Write-Host "[deploy] $args" -ForegroundColor Green }
-function Write-Warn  { Write-Host "[deploy] $args" -ForegroundColor Yellow }
-function Write-Fail  { Write-Host "[deploy] $args" -ForegroundColor Red; exit 1 }
+function Write-Info { Write-Host "[deploy] $args" -ForegroundColor Cyan }
+function Write-Ok   { Write-Host "[deploy] $args" -ForegroundColor Green }
+function Write-Warn { Write-Host "[deploy] $args" -ForegroundColor Yellow }
+function Write-Fail { Write-Host "[deploy] $args" -ForegroundColor Red; exit 1 }
 
 # ── Admin check ───────────────────────────────────────────────────────────────
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Fail "Run this script as Administrator."
-}
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) { Write-Fail "Run this script as Administrator." }
 
 Set-Location $RepoPath
 Write-Info "Deploying from: $RepoPath"
@@ -48,17 +43,15 @@ if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
     $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
 }
 
-foreach ($pkg in @("nodejs", "postgresql", "caddy", "nssm")) {
-    if (-not (Get-Command ($pkg -replace "postgresql","psql" -replace "nodejs","node") -ErrorAction SilentlyContinue)) {
+$pkgMap = @{ "nodejs" = "node"; "postgresql" = "psql"; "caddy" = "caddy"; "nssm" = "nssm" }
+foreach ($pkg in $pkgMap.Keys) {
+    if (-not (Get-Command $pkgMap[$pkg] -ErrorAction SilentlyContinue)) {
         Write-Info "Installing $pkg..."
         choco install $pkg -y --no-progress
     }
 }
 
-# Refresh PATH
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-            [System.Environment]::GetEnvironmentVariable("Path","User")
-
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 Write-Ok "Prerequisites ready"
 
 # ── 2. Environment / .env ─────────────────────────────────────────────────────
@@ -69,27 +62,25 @@ if (-not (Test-Path $envFile)) {
     Write-Warn "============================================================"
     Write-Warn " ACTION REQUIRED: fill in .env before continuing"
     Write-Warn "============================================================"
-    Write-Warn "  POSTGRES_PASSWORD  — run: openssl rand -hex 32"
-    Write-Warn "  JWT_SECRET         — run: openssl rand -hex 64"
-    Write-Warn "  APP_URL            — e.g. https://cashflow.cred-desk.com"
-    Write-Warn "  CLOUDFLARE_TUNNEL_TOKEN — not needed (config.yml is used)"
+    Write-Warn "  POSTGRES_PASSWORD  - run: openssl rand -hex 32"
+    Write-Warn "  JWT_SECRET         - run: openssl rand -hex 64"
+    Write-Warn "  APP_URL            - e.g. https://cashflow.cred-desk.com"
     Write-Warn "============================================================"
     Write-Host ""
     notepad $envFile
     Read-Host "Press Enter once .env is saved and closed"
 }
 
-# Load .env into current session
-Get-Content $envFile | Where-Object { $_ -match "^\s*[^#]" } | ForEach-Object {
+Get-Content $envFile | Where-Object { $_ -match "^\s*[^#\s]" } | ForEach-Object {
     $parts = $_ -split "=", 2
     if ($parts.Count -eq 2) {
         [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), "Process")
     }
 }
 
-$PG_PASS   = [System.Environment]::GetEnvironmentVariable("POSTGRES_PASSWORD","Process")
-$JWT_SEC   = [System.Environment]::GetEnvironmentVariable("JWT_SECRET","Process")
-$APP_URL   = [System.Environment]::GetEnvironmentVariable("APP_URL","Process")
+$PG_PASS = [System.Environment]::GetEnvironmentVariable("POSTGRES_PASSWORD", "Process")
+$JWT_SEC = [System.Environment]::GetEnvironmentVariable("JWT_SECRET", "Process")
+$APP_URL = [System.Environment]::GetEnvironmentVariable("APP_URL", "Process")
 
 if (-not $PG_PASS -or $PG_PASS -like "change_me*") { Write-Fail "POSTGRES_PASSWORD not set in .env" }
 if (-not $JWT_SEC -or $JWT_SEC -like "change_me*")  { Write-Fail "JWT_SECRET not set in .env" }
@@ -97,22 +88,18 @@ if (-not $JWT_SEC -or $JWT_SEC -like "change_me*")  { Write-Fail "JWT_SECRET not
 # ── 3. PostgreSQL database ─────────────────────────────────────────────────────
 Write-Info "Setting up PostgreSQL database..."
 
-$pgBin = (Get-ChildItem "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue |
-          Sort-Object Name -Descending | Select-Object -First 1).FullName + "\bin"
-$env:Path += ";$pgBin"
-$env:PGPASSWORD = "postgres"   # default superuser pass after choco install
+$pgDir = Get-ChildItem "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+if ($pgDir) { $env:Path += ";$($pgDir.FullName)\bin" }
+$env:PGPASSWORD = "postgres"
 
-# Create user and database if they don't exist
-$createSQL = @"
-DO \$\$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'cashflow') THEN
-    CREATE USER cashflow WITH PASSWORD '$PG_PASS';
-  END IF;
-END \$\$;
-"@
-& psql -U postgres -c $createSQL 2>$null
+# Create user (ignore error if already exists)
+$prev = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
+& psql -U postgres -c "CREATE USER cashflow WITH PASSWORD '$PG_PASS';" 2>$null
+$ErrorActionPreference = $prev
+& psql -U postgres -c "ALTER USER cashflow WITH PASSWORD '$PG_PASS';" 2>$null
 
-$dbExists = & psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='cashflow'" 2>$null
+$dbExists = (& psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='cashflow'" 2>$null).Trim()
 if ($dbExists -ne "1") {
     & psql -U postgres -c "CREATE DATABASE cashflow OWNER cashflow;"
 }
@@ -125,7 +112,7 @@ npm install --silent
 
 Write-Info "Building frontend..."
 npm run build
-Write-Ok "Frontend built → frontend\dist"
+Write-Ok "Frontend built"
 
 # ── 5. Build backend ───────────────────────────────────────────────────────────
 Write-Info "Installing backend dependencies..."
@@ -134,47 +121,38 @@ npm install --silent
 
 Write-Info "Compiling backend TypeScript..."
 npm run build
-Write-Ok "Backend compiled → backend\dist"
+Write-Ok "Backend compiled"
 
-# Write backend .env
-@"
-DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow
-JWT_SECRET=$JWT_SEC
-PORT=$BackendPort
-ALLOWED_ORIGINS=$APP_URL
-"@ | Set-Content "$RepoPath\backend\.env"
+$backendEnv = "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow`nJWT_SECRET=$JWT_SEC`nPORT=$BackendPort`nALLOWED_ORIGINS=$APP_URL`nNODE_ENV=production"
+$backendEnv | Set-Content "$RepoPath\backend\.env"
 
 Set-Location $RepoPath
 
 # ── 6. Caddyfile ───────────────────────────────────────────────────────────────
 Write-Info "Writing Caddyfile..."
-$distPath = "$RepoPath\frontend\dist"
+$distPath    = "$RepoPath\frontend\dist"
+$caddyDir    = "$env:ProgramData\caddy"
 $caddyContent = Get-Content "$RepoPath\nginx\Caddyfile.windows" -Raw
-$caddyContent = $caddyContent -replace "C:\\cashflow\\frontend\\dist", $distPath
+$caddyContent = $caddyContent -replace [regex]::Escape("C:\cashflow\frontend\dist"), $distPath
 $caddyContent = $caddyContent -replace "127\.0\.0\.1:3000", "127.0.0.1:$BackendPort"
 
-$caddyDir = "$env:ProgramData\caddy"
 New-Item -ItemType Directory -Force -Path $caddyDir | Out-Null
 $caddyContent | Set-Content "$caddyDir\Caddyfile"
 Write-Ok "Caddyfile written to $caddyDir\Caddyfile"
 
 # ── 7. NSSM services ───────────────────────────────────────────────────────────
 Write-Info "Installing NSSM services..."
+New-Item -ItemType Directory -Force -Path "$RepoPath\logs" | Out-Null
 
 $nodePath  = (Get-Command node).Source
 $caddyPath = (Get-Command caddy).Source
 
 # Backend service
-nssm stop  cashflow-backend 2>$null
+nssm stop   cashflow-backend 2>$null
 nssm remove cashflow-backend confirm 2>$null
 nssm install cashflow-backend $nodePath "$RepoPath\backend\dist\index.js"
 nssm set cashflow-backend AppDirectory "$RepoPath\backend"
-nssm set cashflow-backend AppEnvironmentExtra `
-    "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow" `
-    "JWT_SECRET=$JWT_SEC" `
-    "PORT=$BackendPort" `
-    "ALLOWED_ORIGINS=$APP_URL" `
-    "NODE_ENV=production"
+nssm set cashflow-backend AppEnvironmentExtra "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow" "JWT_SECRET=$JWT_SEC" "PORT=$BackendPort" "ALLOWED_ORIGINS=$APP_URL" "NODE_ENV=production"
 nssm set cashflow-backend Start SERVICE_AUTO_START
 nssm set cashflow-backend AppStdout "$RepoPath\logs\backend.log"
 nssm set cashflow-backend AppStderr "$RepoPath\logs\backend-error.log"
@@ -182,14 +160,12 @@ nssm set cashflow-backend AppRotateFiles 1
 nssm set cashflow-backend AppRotateOnline 1
 
 # Caddy service
-nssm stop  cashflow-caddy 2>$null
+nssm stop   cashflow-caddy 2>$null
 nssm remove cashflow-caddy confirm 2>$null
 nssm install cashflow-caddy $caddyPath "run --config `"$caddyDir\Caddyfile`""
 nssm set cashflow-caddy Start SERVICE_AUTO_START
 nssm set cashflow-caddy AppStdout "$RepoPath\logs\caddy.log"
 nssm set cashflow-caddy AppStderr "$RepoPath\logs\caddy-error.log"
-
-New-Item -ItemType Directory -Force -Path "$RepoPath\logs" | Out-Null
 
 nssm start cashflow-backend
 nssm start cashflow-caddy
@@ -199,7 +175,6 @@ Write-Ok "Services installed and started"
 # ── 8. Cloudflare config.yml ───────────────────────────────────────────────────
 Write-Info "Updating Cloudflare Tunnel config..."
 
-# Find the config.yml (same location used by your other MIS apps)
 $cfConfigPaths = @(
     "$env:USERPROFILE\.cloudflared\config.yml",
     "$env:ProgramData\cloudflared\config.yml",
@@ -207,87 +182,77 @@ $cfConfigPaths = @(
 )
 $cfConfig = $cfConfigPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
+if (-not $AppSubdomain -and $APP_URL) {
+    $AppSubdomain = ([System.Uri]$APP_URL).Host
+}
+
 if ($cfConfig) {
     $content = Get-Content $cfConfig -Raw
 
-    # Extract subdomain from APP_URL or use param
-    if (-not $AppSubdomain -and $APP_URL) {
-        $AppSubdomain = ([System.Uri]$APP_URL).Host
-    }
-
-    $newIngress = "  - hostname: $AppSubdomain`n    service: http://127.0.0.1:$CaddyPort"
-
     if ($content -notmatch [regex]::Escape($AppSubdomain)) {
-        # Insert before the catch-all (last ingress line)
-        $content = $content -replace "(- service: http_status:404)", "$newIngress`n  `$1"
-        $content | Set-Content $cfConfig -NoNewline
-        Write-Ok "Added ingress entry for $AppSubdomain → 127.0.0.1:$CaddyPort"
+        $newEntry = "  - hostname: $AppSubdomain`r`n    service: http://127.0.0.1:$CaddyPort`r`n"
+        $content  = $content -replace "(?m)^(\s*- service: http_status:404)", "$newEntry`$1"
+        [System.IO.File]::WriteAllText($cfConfig, $content)
+        Write-Ok "Added ingress entry: $AppSubdomain -> 127.0.0.1:$CaddyPort"
 
-        # Add DNS route
-        Write-Info "Adding DNS CNAME..."
-        cloudflared tunnel route dns (Get-Content $cfConfig | Select-String "^tunnel:" | ForEach-Object { $_ -replace "tunnel:\s*","" }) $AppSubdomain 2>$null
-        Write-Warn "Restarting cloudflared service..."
+        $tunnelId = (Get-Content $cfConfig | Select-String "^tunnel:").ToString() -replace "tunnel:\s*", ""
+        if ($tunnelId) {
+            Write-Info "Adding DNS CNAME..."
+            cloudflared tunnel route dns $tunnelId.Trim() $AppSubdomain 2>$null
+        }
+
         Restart-Service cloudflared -ErrorAction SilentlyContinue
-        Write-Ok "Cloudflare Tunnel updated"
+        Write-Ok "Cloudflare Tunnel restarted"
     } else {
-        Write-Warn "$AppSubdomain already in config.yml — skipping"
+        Write-Warn "$AppSubdomain already in config.yml - skipping"
     }
 } else {
-    Write-Warn "Could not find cloudflared config.yml."
-    Write-Warn "Manually add this to your config.yml ingress block (before the catch-all):"
-    Write-Warn ""
-    Write-Warn "  - hostname: $( if ($AppSubdomain) { $AppSubdomain } else { 'cashflow.cred-desk.com' } )"
-    Write-Warn "    service: http://127.0.0.1:$CaddyPort"
-    Write-Warn ""
+    Write-Host ""
+    Write-Warn "Could not find cloudflared config.yml automatically."
+    Write-Warn "Add this to your config.yml ingress block (before the catch-all line):"
+    Write-Host "  - hostname: $AppSubdomain" -ForegroundColor White
+    Write-Host "    service: http://127.0.0.1:$CaddyPort" -ForegroundColor White
     Write-Warn "Then run: Restart-Service cloudflared"
+    Write-Host ""
 }
 
-# ── 9. Task Scheduler auto-update job ─────────────────────────────────────────
+# ── 9. Task Scheduler auto-update ─────────────────────────────────────────────
 Write-Info "Setting up Task Scheduler auto-update (every 5 minutes)..."
 
 $taskName   = "CashFlow-AutoUpdate"
 $scriptPath = "$RepoPath\update.ps1"
-$action     = New-ScheduledTaskAction -Execute "powershell.exe" `
-                  -Argument "-NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
-$trigger    = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once `
-                  -At (Get-Date)
-$settings   = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 4) `
-                  -MultipleInstances IgnoreNew
+$action     = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
+$trigger    = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)
+$settings   = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 4) -MultipleInstances IgnoreNew
 $principal  = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
 
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
-    -Settings $settings -Principal $principal | Out-Null
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal | Out-Null
 
-Write-Ok "Task Scheduler job '$taskName' registered (runs every 5 minutes)"
+Write-Ok "Task Scheduler job '$taskName' registered (every 5 minutes)"
 
-# ── 10. First-time user creation ───────────────────────────────────────────────
+# ── 10. Create app user ────────────────────────────────────────────────────────
 Write-Host ""
 $createUser = Read-Host "Create the app user now? (y/N)"
 if ($createUser -eq "y" -or $createUser -eq "Y") {
-    $userEmail = Read-Host "  Email"
-    $userPass  = Read-Host "  Password" -AsSecureString
-    $userPassPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($userPass))
-    $userName  = Read-Host "  Username"
+    $userEmail     = Read-Host "  Email"
+    $userPassSec   = Read-Host "  Password" -AsSecureString
+    $userPassPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($userPassSec))
+    $userName      = Read-Host "  Username"
 
-    # Temporarily enable user creation
     Add-Content "$RepoPath\backend\.env" "`nALLOW_CREATE_USER=1"
     nssm restart cashflow-backend
-    Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 4
 
-    $body = "{`"email`":`"$userEmail`",`"password`":`"$userPassPlain`",`"username`":`"$userName`"}"
+    $body = '{"email":"' + $userEmail + '","password":"' + $userPassPlain + '","username":"' + $userName + '"}'
     try {
-        $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$BackendPort/api/auth/create-user" `
-            -Method POST -ContentType "application/json" `
-            -Headers @{"X-CF-App-Request"="1"} -Body $body
+        $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$BackendPort/api/auth/create-user" -Method POST -ContentType "application/json" -Headers @{"X-CF-App-Request"="1"} -Body $body
         Write-Ok "User created: $($resp.email)"
     } catch {
         Write-Warn "User creation failed: $_"
-        Write-Warn "You can retry manually — see PROJECT_CONTEXT.md"
+        Write-Warn "Retry manually - see PROJECT_CONTEXT.md"
     }
 
-    # Remove the flag
     $envContent = Get-Content "$RepoPath\backend\.env" | Where-Object { $_ -notmatch "ALLOW_CREATE_USER" }
     $envContent | Set-Content "$RepoPath\backend\.env"
     nssm restart cashflow-backend
@@ -296,12 +261,11 @@ if ($createUser -eq "y" -or $createUser -eq "Y") {
 # ── Done ───────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Ok "============================================================"
-Write-Ok " Deployment complete!"
-Write-Ok " App: $APP_URL"
+Write-Ok " Deployment complete! App: $APP_URL"
 Write-Ok ""
-Write-Ok " Services:   nssm status cashflow-backend"
-Write-Ok "             nssm status cashflow-caddy"
-Write-Ok " Logs:       $RepoPath\logs\"
-Write-Ok " Auto-update: Task Scheduler → CashFlow-AutoUpdate (every 5 min)"
+Write-Ok " nssm status cashflow-backend"
+Write-Ok " nssm status cashflow-caddy"
+Write-Ok " Logs: $RepoPath\logs\"
+Write-Ok " Auto-update: Task Scheduler -> CashFlow-AutoUpdate"
 Write-Ok " Update now:  .\update.ps1"
 Write-Ok "============================================================"
