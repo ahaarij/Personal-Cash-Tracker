@@ -169,8 +169,8 @@ $nodePath  = (Get-Command node).Source
 $caddyPath = (Get-Command caddy).Source
 
 # Backend service
-nssm stop   cashflow-backend 2>$null
-nssm remove cashflow-backend confirm 2>$null
+nssm stop   cashflow-backend 2>&1 | Out-Null
+nssm remove cashflow-backend confirm 2>&1 | Out-Null
 nssm install cashflow-backend $nodePath "$RepoPath\backend\dist\index.js"
 nssm set cashflow-backend AppDirectory "$RepoPath\backend"
 nssm set cashflow-backend AppEnvironmentExtra "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow" "JWT_SECRET=$JWT_SEC" "PORT=$BackendPort" "ALLOWED_ORIGINS=$APP_URL" "NODE_ENV=production"
@@ -181,8 +181,8 @@ nssm set cashflow-backend AppRotateFiles 1
 nssm set cashflow-backend AppRotateOnline 1
 
 # Caddy service
-nssm stop   cashflow-caddy 2>$null
-nssm remove cashflow-caddy confirm 2>$null
+nssm stop   cashflow-caddy 2>&1 | Out-Null
+nssm remove cashflow-caddy confirm 2>&1 | Out-Null
 nssm install cashflow-caddy $caddyPath "run --config `"$caddyDir\Caddyfile`""
 nssm set cashflow-caddy Start SERVICE_AUTO_START
 nssm set cashflow-caddy AppStdout "$RepoPath\logs\caddy.log"
