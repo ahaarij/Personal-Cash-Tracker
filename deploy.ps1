@@ -216,10 +216,27 @@ Write-Ok "Services installed and started"
 # ── 8. Cloudflare config.yml ───────────────────────────────────────────────────
 Write-Info "Updating Cloudflare Tunnel config..."
 
+# Find cloudflared.exe
+$cfCmd = Get-Command cloudflared -ErrorAction SilentlyContinue
+$cfExe = if ($cfCmd) { $cfCmd.Source } else { $null }
+if (-not $cfExe) {
+    $cfSearchPaths = @(
+        "$env:USERPROFILE\OneDrive*\Desktop\CCI-MIS\cloudfared\cloudflared.exe",
+        "$env:USERPROFILE\OneDrive*\Desktop\CCI-MIS\cloudflared\cloudflared.exe",
+        "C:\cloudflared\cloudflared.exe",
+        "C:\tools\cloudflared\cloudflared.exe"
+    )
+    foreach ($p in $cfSearchPaths) {
+        $found = Resolve-Path $p -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { $cfExe = $found.Path; break }
+    }
+}
+if ($cfExe) { Write-Info "Using cloudflared: $cfExe" } else { Write-Warn "cloudflared.exe not found — tunnel config will need manual update" }
+
 $cfConfigPaths = @(
     "$env:USERPROFILE\.cloudflared\config.yml",
     "$env:ProgramData\cloudflared\config.yml",
-    "C:\cloudflared\config.yml"
+    (Split-Path $cfExe -Parent) + "\config.yml"
 )
 $cfConfig = $cfConfigPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
@@ -236,14 +253,22 @@ if ($cfConfig) {
         [System.IO.File]::WriteAllText($cfConfig, $content)
         Write-Ok "Added ingress entry: $AppSubdomain -> 127.0.0.1:$CaddyPort"
 
-        $tunnelId = (Get-Content $cfConfig | Select-String "^tunnel:").ToString() -replace "tunnel:\s*", ""
-        if ($tunnelId) {
-            Write-Info "Adding DNS CNAME..."
-            cloudflared tunnel route dns $tunnelId.Trim() $AppSubdomain 2>$null
+        if ($cfExe) {
+            $tunnelId = (Get-Content $cfConfig | Select-String "^tunnel:").ToString() -replace "tunnel:\s*", ""
+            if ($tunnelId) {
+                Write-Info "Adding DNS CNAME..."
+                & $cfExe tunnel route dns $tunnelId.Trim() $AppSubdomain 2>$null
+            }
         }
 
-        Restart-Service cloudflared -ErrorAction SilentlyContinue
-        Write-Ok "Cloudflare Tunnel restarted"
+        # Restart the cloudflared service (find it by searching for the exe path)
+        $cfService = Get-WmiObject Win32_Service | Where-Object { $_.PathName -match "cloudflared" } | Select-Object -First 1
+        if ($cfService) {
+            Restart-Service $cfService.Name -ErrorAction SilentlyContinue
+            Write-Ok "Cloudflare Tunnel restarted"
+        } else {
+            Write-Warn "Restart cloudflared manually to apply the new hostname"
+        }
     } else {
         Write-Warn "$AppSubdomain already in config.yml - skipping"
     }
