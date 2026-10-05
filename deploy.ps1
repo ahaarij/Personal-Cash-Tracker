@@ -168,28 +168,47 @@ New-Item -ItemType Directory -Force -Path "$RepoPath\logs" | Out-Null
 $nodePath  = (Get-Command node).Source
 $caddyPath = (Get-Command caddy).Source
 
+# Find nssm.exe — check PATH first, then known locations on this server
+$nssmExe = (Get-Command nssm -ErrorAction SilentlyContinue)?.Source
+if (-not $nssmExe) {
+    $nssmSearchPaths = @(
+        "$env:USERPROFILE\OneDrive*\Desktop\CCI-MIS\nssm\nssm.exe",
+        "C:\nssm\nssm.exe",
+        "C:\tools\nssm\nssm.exe",
+        "C:\ProgramData\chocolatey\bin\nssm.exe"
+    )
+    foreach ($p in $nssmSearchPaths) {
+        $found = Resolve-Path $p -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { $nssmExe = $found.Path; break }
+    }
+}
+if (-not $nssmExe) { Write-Fail "Cannot find nssm.exe. Add it to PATH or place it at C:\nssm\nssm.exe" }
+Write-Info "Using nssm: $nssmExe"
+
+function Invoke-Nssm { & $nssmExe @args }
+
 # Backend service
-nssm stop   cashflow-backend 2>&1 | Out-Null
-nssm remove cashflow-backend confirm 2>&1 | Out-Null
-nssm install cashflow-backend $nodePath "$RepoPath\backend\dist\index.js"
-nssm set cashflow-backend AppDirectory "$RepoPath\backend"
-nssm set cashflow-backend AppEnvironmentExtra "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow" "JWT_SECRET=$JWT_SEC" "PORT=$BackendPort" "ALLOWED_ORIGINS=$APP_URL" "NODE_ENV=production"
-nssm set cashflow-backend Start SERVICE_AUTO_START
-nssm set cashflow-backend AppStdout "$RepoPath\logs\backend.log"
-nssm set cashflow-backend AppStderr "$RepoPath\logs\backend-error.log"
-nssm set cashflow-backend AppRotateFiles 1
-nssm set cashflow-backend AppRotateOnline 1
+try { Invoke-Nssm stop   cashflow-backend | Out-Null } catch {}
+try { Invoke-Nssm remove cashflow-backend confirm | Out-Null } catch {}
+Invoke-Nssm install cashflow-backend $nodePath "$RepoPath\backend\dist\index.js"
+Invoke-Nssm set cashflow-backend AppDirectory "$RepoPath\backend"
+Invoke-Nssm set cashflow-backend AppEnvironmentExtra "DATABASE_URL=postgresql://cashflow:$PG_PASS@127.0.0.1:5432/cashflow" "JWT_SECRET=$JWT_SEC" "PORT=$BackendPort" "ALLOWED_ORIGINS=$APP_URL" "NODE_ENV=production"
+Invoke-Nssm set cashflow-backend Start SERVICE_AUTO_START
+Invoke-Nssm set cashflow-backend AppStdout "$RepoPath\logs\backend.log"
+Invoke-Nssm set cashflow-backend AppStderr "$RepoPath\logs\backend-error.log"
+Invoke-Nssm set cashflow-backend AppRotateFiles 1
+Invoke-Nssm set cashflow-backend AppRotateOnline 1
 
 # Caddy service
-nssm stop   cashflow-caddy 2>&1 | Out-Null
-nssm remove cashflow-caddy confirm 2>&1 | Out-Null
-nssm install cashflow-caddy $caddyPath "run --config `"$caddyDir\Caddyfile`""
-nssm set cashflow-caddy Start SERVICE_AUTO_START
-nssm set cashflow-caddy AppStdout "$RepoPath\logs\caddy.log"
-nssm set cashflow-caddy AppStderr "$RepoPath\logs\caddy-error.log"
+try { Invoke-Nssm stop   cashflow-caddy | Out-Null } catch {}
+try { Invoke-Nssm remove cashflow-caddy confirm | Out-Null } catch {}
+Invoke-Nssm install cashflow-caddy $caddyPath "run --config `"$caddyDir\Caddyfile`""
+Invoke-Nssm set cashflow-caddy Start SERVICE_AUTO_START
+Invoke-Nssm set cashflow-caddy AppStdout "$RepoPath\logs\caddy.log"
+Invoke-Nssm set cashflow-caddy AppStderr "$RepoPath\logs\caddy-error.log"
 
-nssm start cashflow-backend
-nssm start cashflow-caddy
+Invoke-Nssm start cashflow-backend
+Invoke-Nssm start cashflow-caddy
 
 Write-Ok "Services installed and started"
 
