@@ -90,6 +90,20 @@ Write-Info "Setting up PostgreSQL database..."
 
 $pgDir = Get-ChildItem "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
 if ($pgDir) { $env:Path += ";$($pgDir.FullName)\bin" }
+
+# Start PostgreSQL service (choco installs it but doesn't always start it)
+$pgService = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($pgService) {
+    if ($pgService.Status -ne "Running") {
+        Write-Info "Starting PostgreSQL service ($($pgService.Name))..."
+        Start-Service $pgService.Name
+        Start-Sleep -Seconds 3
+    }
+    Write-Ok "PostgreSQL service running"
+} else {
+    Write-Warn "PostgreSQL service not found - make sure it installed correctly"
+}
+
 $env:PGPASSWORD = "postgres"
 
 # Create user (ignore error if already exists)
