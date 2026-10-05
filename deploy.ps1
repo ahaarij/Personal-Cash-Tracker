@@ -169,7 +169,8 @@ $nodePath  = (Get-Command node).Source
 $caddyPath = (Get-Command caddy).Source
 
 # Find nssm.exe — check PATH first, then known locations on this server
-$nssmExe = (Get-Command nssm -ErrorAction SilentlyContinue)?.Source
+$nssmCmd = Get-Command nssm -ErrorAction SilentlyContinue
+$nssmExe = if ($nssmCmd) { $nssmCmd.Source } else { $null }
 if (-not $nssmExe) {
     $nssmSearchPaths = @(
         "$env:USERPROFILE\OneDrive*\Desktop\CCI-MIS\nssm\nssm.exe",
