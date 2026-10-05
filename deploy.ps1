@@ -315,7 +315,7 @@ if ($createUser -eq "y" -or $createUser -eq "Y") {
     $userName      = Read-Host "  Username"
 
     Add-Content "$RepoPath\backend\.env" "`nALLOW_CREATE_USER=1"
-    nssm restart cashflow-backend
+    Invoke-Nssm restart cashflow-backend
     Start-Sleep -Seconds 4
 
     $body = '{"email":"' + $userEmail + '","password":"' + $userPassPlain + '","username":"' + $userName + '"}'
@@ -329,7 +329,7 @@ if ($createUser -eq "y" -or $createUser -eq "Y") {
 
     $envContent = Get-Content "$RepoPath\backend\.env" | Where-Object { $_ -notmatch "ALLOW_CREATE_USER" }
     $envContent | Set-Content "$RepoPath\backend\.env"
-    nssm restart cashflow-backend
+    Invoke-Nssm restart cashflow-backend
 }
 
 # ── Done ───────────────────────────────────────────────────────────────────────

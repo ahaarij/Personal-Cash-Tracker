@@ -11,28 +11,42 @@ $before = git rev-parse HEAD 2>$null
 git pull origin main --quiet 2>$null
 $after  = git rev-parse HEAD 2>$null
 
-if ($before -eq $after) { exit 0 }   # no changes — nothing to do
+if ($before -eq $after) { exit 0 }
 
-# Code changed — rebuild and restart
+# Find nssm.exe
+$nssmCmd = Get-Command nssm -ErrorAction SilentlyContinue
+$nssmExe = if ($nssmCmd) { $nssmCmd.Source } else { $null }
+if (-not $nssmExe) {
+    $nssmSearchPaths = @(
+        "$env:USERPROFILE\OneDrive*\Desktop\CCI-MIS\nssm\nssm.exe",
+        "C:\nssm\nssm.exe",
+        "C:\tools\nssm\nssm.exe",
+        "C:\ProgramData\chocolatey\bin\nssm.exe"
+    )
+    foreach ($p in $nssmSearchPaths) {
+        $found = Resolve-Path $p -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { $nssmExe = $found.Path; break }
+    }
+}
+
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-Add-Content "$RepoPath\logs\update.log" "[$timestamp] Update detected ($before → $after), rebuilding..."
+Add-Content "$RepoPath\logs\update.log" "[$timestamp] Update detected ($before -> $after), rebuilding..."
 
 try {
-    # Rebuild frontend
     Set-Location "$RepoPath\frontend"
     npm install --silent
     npm run build
 
-    # Rebuild backend
     Set-Location "$RepoPath\backend"
     npm install --silent
     npm run build
 
     Set-Location $RepoPath
 
-    # Restart services
-    nssm restart cashflow-backend
-    nssm restart cashflow-caddy
+    if ($nssmExe) {
+        & $nssmExe restart cashflow-backend
+        & $nssmExe restart cashflow-caddy
+    }
 
     Add-Content "$RepoPath\logs\update.log" "[$timestamp] Restart complete."
 } catch {
