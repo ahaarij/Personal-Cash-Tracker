@@ -1,0 +1,70 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.field__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+  -webkit-appearance: none;
+}
+
+.field__input::placeholder {
+  color: var(--color-text-3);
+}
+
+.field__input:hover { border-color: var(--color-border-strong); }
+
+.field__input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+.field__input--with-suffix {
+  padding-right: var(--space-12);
+}
+
+.field__suffix {
+  position: absolute;
+  right: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-3);
+  pointer-events: none;
+}
+
+.field--error .field__input {
+  border-color: var(--color-negative);
+}
+.field--error .field__input:focus {
+  box-shadow: 0 0 0 3px var(--color-negative-bg);
+}
+
+.field__error {
+  font-size: var(--text-xs);
+  color: var(--color-negative);
+}
+
+.field__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+}

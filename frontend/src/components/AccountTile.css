@@ -1,0 +1,163 @@
+/* ── Column wrapper ────────────────────────────────────────────────────────── */
+
+.account-tile-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.account-tile-col--empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+}
+
+/* ── Individual account card ───────────────────────────────────────────────── */
+
+.account-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.account-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.account-card--danger { border-color: color-mix(in srgb, var(--color-negative) 35%, var(--color-border)); }
+.account-card--warn   { border-color: color-mix(in srgb, var(--color-warning)  35%, var(--color-border)); }
+
+/* Card name */
+.account-card__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-card__warn-icon { flex-shrink: 0; }
+.account-card__warn-icon--warn   { color: var(--color-warning); }
+.account-card__warn-icon--danger { color: var(--color-negative); }
+
+/* Credit card amounts */
+.account-card__credit-amounts {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  line-height: 1.2;
+}
+
+.account-card__utilized {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.account-card__limit-sep {
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+}
+
+.account-card__limit {
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+}
+
+.account-card__remaining {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.account-card__remaining-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+}
+
+.account-card__remaining .money {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* Simple (cash / debit) card */
+.account-card__simple-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-card__balance-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+}
+
+.account-card__balance {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@media (max-width: 768px) {
+  .account-card {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+
+  .account-card__utilized {
+    font-size: var(--text-sm);
+  }
+
+  .account-card__balance {
+    font-size: var(--text-sm);
+  }
+}
+
+/* ── Add buttons ───────────────────────────────────────────────────────────── */
+
+.account-tile__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-standard);
+  width: 100%;
+}
+
+.account-tile__add-btn:hover {
+  color: var(--color-accent);
+}
+
+.account-tile__add-btn--more {
+  font-size: 11px;
+  padding: var(--space-1) var(--space-2);
+  opacity: 0.7;
+}
+
+.account-tile__add-btn--more:hover {
+  opacity: 1;
+}

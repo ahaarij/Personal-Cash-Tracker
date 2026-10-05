@@ -1,0 +1,42 @@
+# Cloudflare Tunnel configuration
+# The tunnel token is passed via CLOUDFLARE_TUNNEL_TOKEN env var in docker-compose.yml
+# This config file is for documentation/reference — the token-based run command
+# used in docker-compose does not need a config file.
+
+# ingress:
+#   - hostname: cashflow.yourdomain.com
+#     service: http://web:3000
+#   # Catch-all 404 for anything not matched
+#   - service: http_status:404
+
+# ── Setup instructions ─────────────────────────────────────────────────────
+# 1. Install cloudflared CLI locally:
+#    brew install cloudflare/cloudflare/cloudflared
+#
+# 2. Authenticate:
+#    cloudflared tunnel login
+#
+# 3. Create a named tunnel:
+#    cloudflared tunnel create cashflow
+#    # Save the tunnel ID shown
+#
+# 4. Create a DNS CNAME for your hostname pointing to <tunnel-id>.cfargotunnel.com
+#    cloudflared tunnel route dns cashflow cashflow.yourdomain.com
+#
+# 5. Get the tunnel token for Docker:
+#    cloudflared tunnel token cashflow
+#    # Paste this value as CLOUDFLARE_TUNNEL_TOKEN in your .env file
+#
+# ── Cloudflare Access setup ────────────────────────────────────────────────
+# In the Cloudflare Zero Trust dashboard:
+# 1. Go to Access → Applications → Add an application
+# 2. Choose "Self-hosted", hostname: cashflow.yourdomain.com
+# 3. Create a policy: Allow → Email → your email address
+# 4. Enable MFA requirement
+# 5. Set session duration to 30 days
+#
+# Access is an additional authentication layer in front of the app's own auth.
+# If Access interferes with SSE/WebSocket connections for realtime sync,
+# configure Access to apply only to page routes (not /api/*), and ensure
+# the app's own hardened auth protects all API endpoints independently.
+# See DECISIONS.md for the fallback configuration.

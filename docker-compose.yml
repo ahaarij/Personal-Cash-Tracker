@@ -1,0 +1,145 @@
+version: "3.9"
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+# All services communicate only on the internal network.
+# Nothing is bound to host ports — traffic enters exclusively via cloudflared.
+networks:
+  internal:
+    driver: bridge
+    internal: true   # no external connectivity from this network
+  tunnel:
+    driver: bridge   # cloudflared bridges internal → internet
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  pg_data:
+    driver: local
+
+# ── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cashflow_db
+    restart: unless-stopped
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: cashflow
+      POSTGRES_USER: cashflow
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    networks:
+      - internal
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cashflow -d cashflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # Hono Node.js backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cashflow_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://cashflow:${POSTGRES_PASSWORD}@postgres:5432/cashflow"
+      JWT_SECRET: "${JWT_SECRET}"
+      PORT: "3000"
+      ALLOWED_ORIGINS: "${APP_URL}"
+    networks:
+      - internal
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # Static frontend served by Caddy with security headers
+  web:
+    image: caddy:2.8.4-alpine    # pinned
+    container_name: cashflow_web
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data
+      - /config
+    volumes:
+      - ./nginx/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv/app:ro
+    networks:
+      - internal
+      - tunnel
+    expose:
+      - "3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  # Cloudflare Tunnel — the only public-facing entry point
+  cloudflared:
+    image: cloudflare/cloudflared:2024.8.3    # pinned
+    container_name: cashflow_tunnel
+    restart: unless-stopped
+    user: "65532:65532"    # non-root (cloudflared's own nobody user)
+    read_only: true
+    tmpfs:
+      - /tmp
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}"
+    networks:
+      - tunnel
+    depends_on:
+      - web
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  # Nightly encrypted backup (run with: docker compose run --rm backup)
+  backup:
+    image: alpine:3.20
+    container_name: cashflow_backup
+    restart: "no"
+    profiles: ["backup"]
+    volumes:
+      - ./scripts/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: cashflow
+      POSTGRES_USER: cashflow
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      BACKUP_ENCRYPTION_PUBKEY: "${BACKUP_ENCRYPTION_PUBKEY}"
+      BACKUP_DEST: "/backups"
+    networks:
+      - internal
+    entrypoint: ["/bin/sh", "/backup.sh"]

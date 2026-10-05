@@ -1,0 +1,146 @@
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+
+:root {
+  /* Colour: warm-neutral palette */
+  --color-bg:           #F7F5F2;
+  --color-bg-subtle:    #F0EDE8;
+  --color-surface:      #FFFFFF;
+  --color-surface-raised: #FAFAF8;
+  --color-border:       #E5E0DA;
+  --color-border-strong: #C8C0B8;
+
+  /* Text */
+  --color-text:         #1C1A18;
+  --color-text-2:       #6B6258;
+  --color-text-3:       #9B9088;
+  --color-text-inverse: #FAFAF8;
+
+  /* Accent — one calm steel blue, for primary actions and focus only */
+  --color-accent:       #1B4F8A;
+  --color-accent-hover: #163E6E;
+  --color-accent-muted: #E8F0FA;
+  --color-accent-text:  #FFFFFF;
+
+  /* Semantic */
+  --color-positive:     #156336;
+  --color-positive-bg:  #EAF5EE;
+  --color-warning:      #B45309;
+  --color-warning-bg:   #FEF3CD;
+  --color-negative:     #B91C1C;
+  --color-negative-bg:  #FEE8E8;
+
+  /* Utilization thresholds */
+  --color-util-ok:      #156336;
+  --color-util-warn:    #B45309;
+  --color-util-danger:  #B91C1C;
+
+  /* Typography */
+  --font-ui:     'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  --font-mono:   'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Type scale (px) */
+  --text-xs:   0.75rem;   /* 12px */
+  --text-sm:   0.875rem;  /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg:   1.25rem;   /* 20px */
+  --text-xl:   1.75rem;   /* 28px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+
+  /* Spacing — 4px base scale */
+  --space-1:  0.25rem;   /* 4px */
+  --space-2:  0.5rem;    /* 8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-12: 3rem;      /* 48px */
+
+  /* Radius — two values only */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+
+  /* Elevation — overlays only */
+  --shadow-overlay: 0 4px 24px rgba(28, 26, 24, 0.12);
+  --shadow-raised:  0 1px 4px rgba(28, 26, 24, 0.08);
+
+  /* Layout */
+  --content-max-width: 1200px;
+  --sidebar-width: 220px;
+  --nav-height-mobile: 56px;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg:           #1C1A18;
+    --color-bg-subtle:    #141210;
+    --color-surface:      #242220;
+    --color-surface-raised: #2E2C2A;
+    --color-border:       #3A3835;
+    --color-border-strong: #524F4B;
+
+    --color-text:         #F0EDE8;
+    --color-text-2:       #A09890;
+    --color-text-3:       #706860;
+    --color-text-inverse: #1C1A18;
+
+    --color-accent:       #5A9FE8;
+    --color-accent-hover: #7AB8FF;
+    --color-accent-muted: #1B3557;
+    --color-accent-text:  #0A1929;
+
+    --color-positive:     #4ABA7A;
+    --color-positive-bg:  #0D2E1A;
+    --color-warning:      #F0A030;
+    --color-warning-bg:   #2E1A00;
+    --color-negative:     #F87171;
+    --color-negative-bg:  #2E0A0A;
+
+    --color-util-ok:      #4ABA7A;
+    --color-util-warn:    #F0A030;
+    --color-util-danger:  #F87171;
+
+    --shadow-overlay: 0 4px 24px rgba(0, 0, 0, 0.48);
+    --shadow-raised:  0 1px 4px rgba(0, 0, 0, 0.32);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg:           #1C1A18;
+  --color-bg-subtle:    #141210;
+  --color-surface:      #242220;
+  --color-surface-raised: #2E2C2A;
+  --color-border:       #3A3835;
+  --color-border-strong: #524F4B;
+
+  --color-text:         #F0EDE8;
+  --color-text-2:       #A09890;
+  --color-text-3:       #706860;
+  --color-text-inverse: #1C1A18;
+
+  --color-accent:       #5A9FE8;
+  --color-accent-hover: #7AB8FF;
+  --color-accent-muted: #1B3557;
+  --color-accent-text:  #0A1929;
+
+  --color-positive:     #4ABA7A;
+  --color-positive-bg:  #0D2E1A;
+  --color-warning:      #F0A030;
+  --color-warning-bg:   #2E1A00;
+  --color-negative:     #F87171;
+  --color-negative-bg:  #2E0A0A;
+
+  --color-util-ok:      #4ABA7A;
+  --color-util-warn:    #F0A030;
+  --color-util-danger:  #F87171;
+
+  --shadow-overlay: 0 4px 24px rgba(0, 0, 0, 0.48);
+  --shadow-raised:  0 1px 4px rgba(0, 0, 0, 0.32);
+}

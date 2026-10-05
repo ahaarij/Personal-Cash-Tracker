@@ -1,0 +1,55 @@
+.sign-in {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--color-bg);
+}
+
+.sign-in__card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.sign-in__title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.sign-in__subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-3);
+  margin-bottom: var(--space-8);
+}
+
+.sign-in__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sign-in__error {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-negative-bg);
+  color: var(--color-negative);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  border-left: 3px solid var(--color-negative);
+}
+
+.sign-in__submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.sign-in__hint {
+  margin-top: var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  text-align: center;
+  line-height: 1.5;
+}

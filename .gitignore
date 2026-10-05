@@ -1,0 +1,36 @@
+# ── Secrets & environment ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+**/credentials.*
+recovery-codes-*.txt
+
+# ── Documentation (kept locally, not in repo) ─────────────────────────────────
+*.md
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+**/dist/
+frontend/coverage/
+
+# ── PocketBase (legacy — app now uses Hono + PostgreSQL) ──────────────────────
+pocketbase/pb_data/
+pocketbase/pocketbase
+
+# ── Backups (stored separately, never in repo) ────────────────────────────────
+backups/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo

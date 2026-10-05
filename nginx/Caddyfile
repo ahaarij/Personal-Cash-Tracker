@@ -1,0 +1,59 @@
+# Caddy serves the static frontend and proxies /api → PocketBase.
+# Runs inside the internal Docker network — not directly reachable from the internet.
+# The Cloudflare Tunnel terminates TLS before forwarding here.
+
+:3000 {
+    # ── Security headers ─────────────────────────────────────────────────
+    header {
+        # No inline scripts, no eval — all assets are self-hosted
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Embedder-Policy "require-corp"
+        Cross-Origin-Resource-Policy "same-origin"
+        # HSTS — 1 year, subdomains, preload-ready
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Remove server identification
+        -Server
+        -X-Powered-By
+    }
+
+    # ── Block PocketBase admin UI from public access ───────────────────
+    @admin path /_/*
+    respond @admin 404
+
+    # ── Block debug/health endpoints from public access ────────────────
+    @internal path /api/health /metrics /debug/*
+    respond @internal 404
+
+    # ── Proxy API calls to Hono backend ──────────────────────────────
+    @api path /api/*
+    reverse_proxy @api backend:3000 {
+        header_up Host {upstream_hostport}
+        # Forward Cloudflare's trusted IP header
+        header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+    }
+
+    # ── Serve static PWA ──────────────────────────────────────────────
+    root * /srv/app
+    encode gzip
+
+    # PWA routing — serve index.html for all non-asset routes
+    try_files {path} /index.html
+
+    file_server {
+        hide .git
+    }
+
+    # Cache static assets aggressively; never cache the HTML shell
+    @static {
+        path *.js *.css *.woff2 *.woff *.ttf *.svg *.ico *.png *.webp
+    }
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    @html path /index.html /
+    header @html Cache-Control "no-cache, no-store, must-revalidate"
+}

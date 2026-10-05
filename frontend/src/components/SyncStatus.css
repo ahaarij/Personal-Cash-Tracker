@@ -1,0 +1,36 @@
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: default;
+}
+
+.sync-status--ok      { color: var(--color-positive); }
+.sync-status--syncing { color: var(--color-text-3); }
+.sync-status--offline { color: var(--color-warning); }
+.sync-status--error   {
+  color: var(--color-negative);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sync-status--error:hover { opacity: 0.8; }
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

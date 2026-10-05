@@ -1,0 +1,16 @@
+.util-bar {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.util-bar__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width var(--duration-base) var(--ease-standard);
+}
+
+.util-bar__fill--ok     { background: var(--color-util-ok); }
+.util-bar__fill--warn   { background: var(--color-util-warn); }
+.util-bar__fill--danger { background: var(--color-util-danger); }

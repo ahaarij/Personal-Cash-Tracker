@@ -1,0 +1,53 @@
+.travelling-sheet {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.trip-totals {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.trip-total-card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  min-width: 180px;
+}
+
+.trip-total-card__name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.trip-total-card__dates {
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.trip-total-card__amounts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.trip-total-card__amounts .money {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.trip-total-card__currency {
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  font-weight: var(--font-weight-regular);
+  margin-left: var(--space-1);
+}

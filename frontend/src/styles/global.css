@@ -1,0 +1,151 @@
+/* ─── Global styles ──────────────────────────────────────────────────────── */
+
+@import './tokens.css';
+@import './reset.css';
+@import './typography.css';
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard);
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App layout */
+.app-shell {
+  display: flex;
+  flex: 1;
+  min-height: 100dvh;
+}
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Smooth page content fade on route transitions */
+@media (prefers-reduced-motion: no-preference) {
+  .app-main > * {
+    animation: page-in 180ms var(--ease-standard) both;
+  }
+
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ─── Number formatting ──────────────────────────────────────────────────── */
+
+.money {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  text-align: right;
+  white-space: nowrap;
+}
+
+.money-negative { color: var(--color-negative); }
+.money-positive { color: var(--color-positive); }
+
+/* ─── Visually hidden (accessible) ─────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ─── Skeleton loader ────────────────────────────────────────────────────── */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.skeleton {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Divider ────────────────────────────────────────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ─── Scrollbar (subtle) ─────────────────────────────────────────────────── */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-3); }
+
+/* ─── Hiding balances (privacy toggle) ──────────────────────────────────── */
+
+[data-hide-balances="true"] .balance-value {
+  filter: blur(6px);
+  user-select: none;
+}
+
+/* ─── Mobile bottom nav ──────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .app-sidebar,
+  .sidebar {
+    display: none;
+  }
+
+  .app-main {
+    padding-bottom: var(--nav-height-mobile);
+  }
+
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--nav-height-mobile);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+}
