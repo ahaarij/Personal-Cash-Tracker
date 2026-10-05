@@ -4,7 +4,7 @@
 #
 # Adjust CASHFLOW_ROOT below if you put the app somewhere else.
 
-:80 {
+:8080 {
     # ── Security headers ─────────────────────────────────────────────────
     header {
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
