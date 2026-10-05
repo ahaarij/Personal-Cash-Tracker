@@ -91,20 +91,27 @@ Write-Info "Setting up PostgreSQL database..."
 $pgDir = Get-ChildItem "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
 if ($pgDir) { $env:Path += ";$($pgDir.FullName)\bin" }
 
-# Start PostgreSQL service (choco installs it but doesn't always start it)
-$pgService = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue | Select-Object -First 1
+# Start PostgreSQL service
+$pgService = Get-Service -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "(?i)postgres" } | Select-Object -First 1
 if ($pgService) {
     if ($pgService.Status -ne "Running") {
         Write-Info "Starting PostgreSQL service ($($pgService.Name))..."
         Start-Service $pgService.Name
         Start-Sleep -Seconds 3
     }
-    Write-Ok "PostgreSQL service running"
+    Write-Ok "PostgreSQL service: $($pgService.Name) ($($pgService.Status))"
 } else {
-    Write-Warn "PostgreSQL service not found - make sure it installed correctly"
+    Write-Host ""
+    Write-Warn "Could not find a PostgreSQL Windows service."
+    Write-Warn "Please start PostgreSQL manually, then press Enter to continue."
+    Write-Warn "(If you installed it via pgAdmin/installer, open Services and start it there)"
+    Read-Host "Press Enter once PostgreSQL is running"
 }
 
-$env:PGPASSWORD = "postgres"
+# Prompt for the postgres superuser password (may differ by installation)
+Write-Host ""
+$pgSuperPass = Read-Host "Enter your PostgreSQL superuser (postgres) password"
+$env:PGPASSWORD = $pgSuperPass
 
 # Create user (ignore error if already exists)
 $prev = $ErrorActionPreference
