@@ -120,10 +120,10 @@ $ErrorActionPreference = "SilentlyContinue"
 $ErrorActionPreference = $prev
 & psql -U postgres -c "ALTER USER cashflow WITH PASSWORD '$PG_PASS';" 2>$null
 
-$dbExists = (& psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='cashflow'" 2>$null).Trim()
-if ($dbExists -ne "1") {
-    & psql -U postgres -c "CREATE DATABASE cashflow OWNER cashflow;"
-}
+$prev2 = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
+& psql -U postgres -c "CREATE DATABASE cashflow OWNER cashflow;" 2>$null
+$ErrorActionPreference = $prev2
 Write-Ok "Database ready"
 
 # ── 4. Build frontend ──────────────────────────────────────────────────────────
