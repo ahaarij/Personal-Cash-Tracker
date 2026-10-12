@@ -30,6 +30,13 @@ import '@/views/ExpensesSheet.css'
 import '@/views/TravellingSheet.css'
 import '@/views/Auth/SignIn.css'
 
+// Auto-reload all clients when a new service worker activates (new deploy)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  })
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

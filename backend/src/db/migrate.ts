@@ -92,6 +92,9 @@ export async function migrate() {
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS fx_currency TEXT`
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS fx_amount BIGINT`
 
+  // v1.2 — wallet grouping (e.g. HSBC Global Money has AED + USD pockets)
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS wallet TEXT`
+
   await sql`
     CREATE TABLE IF NOT EXISTS settings (
       id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

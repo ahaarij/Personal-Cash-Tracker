@@ -22,6 +22,8 @@ export interface Account {
   opening_utilized?: number;
   /** Wise/Revolut-style: card can be charged in any currency, balance tracked in home currency */
   multi_currency?: boolean;
+  /** Groups currency pockets under one card name, e.g. 'HSBC Global Money' */
+  wallet?: string;
   archived: boolean;
   sort_order: number;
   created: string;

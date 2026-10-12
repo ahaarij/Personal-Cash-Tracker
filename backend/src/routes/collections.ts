@@ -12,7 +12,7 @@ const PROTECTED = new Set(['id', 'owner', 'created', 'updated'])
 
 // Explicit allowlist of writable columns per collection
 const WRITABLE: Record<string, Set<string>> = {
-  accounts:     new Set(['name','type','currency','opening_balance','credit_limit','opening_utilized','archived','sort_order','multi_currency']),
+  accounts:     new Set(['name','type','currency','opening_balance','credit_limit','opening_utilized','archived','sort_order','multi_currency','wallet']),
   categories:   new Set(['name','colour','archived']),
   trips:        new Set(['name','start_date','end_date']),
   transactions: new Set(['date','amount','account','type','category','note','trip','transfer_pair_id','transfer_direction','client_id','deleted','fx_currency','fx_amount']),

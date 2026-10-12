@@ -11,7 +11,10 @@ import { AddTrip } from '@/components/AddTrip'
 import { useConfirmDelete } from '@/hooks/useConfirmDelete'
 import { useTheme } from '@/hooks/useTheme'
 import { useCurrencyOrder } from '@/hooks/useCurrencyOrder'
-import { accounts as accCollection, categories as catCollection, trips as tripsCollection, signOut } from '@/lib/api'
+import { accounts as accCollection, categories as catCollection, trips as tripsCollection, settings as settingsCollection, signOut } from '@/lib/api'
+import type { UserSettings } from '@/types'
+
+const DEFAULT_CURRENCIES = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'QAR', 'PKR']
 import { formatDate } from '@/lib/money'
 import type { Account, Category, Trip, AccountType } from '@/types'
 import './Settings.css'
@@ -185,6 +188,7 @@ function CurrencyDragList({ currencies, onReorder }: {
 export function Settings() {
   const [tab, setTab] = useState<Tab>('accounts')
   const [addAccOpen, setAddAccOpen] = useState(false)
+  const [newCurrencyInput, setNewCurrencyInput] = useState('')
   const [editAcc, setEditAcc] = useState<Account | null>(null)
   const [addCatOpen, setAddCatOpen] = useState(false)
   const [editCat, setEditCat] = useState<Category | null>(null)
@@ -202,6 +206,15 @@ export function Settings() {
     queryKey: ['accounts'],
     queryFn: () => accCollection.getFullList<Account>({ sort: 'sort_order,name' }),
   })
+
+  const { data: userSettingsList } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => settingsCollection.getFullList<UserSettings>(),
+  })
+  const userSettings = userSettingsList?.[0]
+  const enabledCurrencies: string[] = userSettings?.enabled_currencies?.length
+    ? userSettings.enabled_currencies
+    : DEFAULT_CURRENCIES
 
   const { data: allCategories, isLoading: catLoading } = useQuery({
     queryKey: ['categories'],
@@ -236,6 +249,14 @@ export function Settings() {
     onError: () => toast.show({ type: 'error', message: 'Could not delete trip.' }),
   })
 
+  const saveCurrencies = useMutation({
+    mutationFn: (currencies: string[]) => settingsCollection.create({ enabled_currencies: currencies } as Partial<UserSettings>),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['settings'] }); toast.show({ type: 'success', message: 'Currencies updated.' }) },
+    onError: () => toast.show({ type: 'error', message: 'Could not save currencies.' }),
+  })
+
+  const existingWallets = [...new Set((allAccounts ?? []).filter((a) => a.wallet).map((a) => a.wallet!))]
+
   const handleSignOut = async () => {
     await signOut()
     window.location.href = '/sign-in'
@@ -255,7 +276,7 @@ export function Settings() {
         </div>
         <div className="settings-row__body">
           <span className="settings-row__name">{acc.name}</span>
-          <span className="settings-row__meta">{TYPE_LABEL[acc.type]} · {acc.currency}</span>
+          <span className="settings-row__meta">{TYPE_LABEL[acc.type]} · {acc.currency}{acc.wallet ? ` · ${acc.wallet}` : ''}</span>
         </div>
         <div className="settings-row__actions">
           <button
@@ -328,11 +349,36 @@ export function Settings() {
             </div>
           )}
 
-          {active.length > 0 && (
-            <div className="settings-list">
-              {active.map((acc) => <AccountRow key={acc.id} acc={acc} />)}
-            </div>
-          )}
+          {active.length > 0 && (() => {
+            const walletMap = new Map<string, Account[]>()
+            const standalone: Account[] = []
+            for (const acc of active) {
+              if (acc.wallet) {
+                const list = walletMap.get(acc.wallet) ?? []
+                list.push(acc)
+                walletMap.set(acc.wallet, list)
+              } else {
+                standalone.push(acc)
+              }
+            }
+            return (
+              <>
+                {[...walletMap.entries()].map(([walletName, accs]) => (
+                  <div key={walletName}>
+                    <div className="settings-section__subtitle">{walletName}</div>
+                    <div className="settings-list">
+                      {accs.map((acc) => <AccountRow key={acc.id} acc={acc} />)}
+                    </div>
+                  </div>
+                ))}
+                {standalone.length > 0 && (
+                  <div className="settings-list" style={{ marginTop: walletMap.size > 0 ? '12px' : 0 }}>
+                    {standalone.map((acc) => <AccountRow key={acc.id} acc={acc} />)}
+                  </div>
+                )}
+              </>
+            )
+          })()}
 
           {archived.length > 0 && (
             <>
@@ -525,6 +571,50 @@ export function Settings() {
             </>
           )}
 
+          {/* Currency management */}
+          <div className="settings-section__subtitle" style={{ marginTop: '24px' }}>Currencies</div>
+          <div className="settings-list">
+            {enabledCurrencies.map((c) => (
+              <div key={c} className="settings-row settings-row--pref">
+                <div className="settings-row__body"><span className="settings-row__name">{c}</span></div>
+                <div className="settings-row__actions">
+                  <button
+                    className="settings-row__icon-btn settings-row__icon-btn--danger"
+                    title="Remove"
+                    onClick={() => saveCurrencies.mutate(enabledCurrencies.filter((x) => x !== c))}
+                    disabled={enabledCurrencies.length <= 1}
+                  >
+                    <Trash2 size={14} strokeWidth={1.5} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <input
+              type="text"
+              value={newCurrencyInput}
+              onChange={(e) => setNewCurrencyInput(e.target.value.toUpperCase().slice(0, 5))}
+              placeholder="e.g. THB"
+              maxLength={5}
+              style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px' }}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const c = newCurrencyInput.trim().toUpperCase()
+                if (c && !enabledCurrencies.includes(c)) {
+                  saveCurrencies.mutate([...enabledCurrencies, c])
+                  setNewCurrencyInput('')
+                }
+              }}
+              disabled={!newCurrencyInput.trim() || saveCurrencies.isPending}
+            >
+              Add
+            </Button>
+          </div>
+
           <div style={{ marginTop: '24px', textAlign: 'center', opacity: 0.4, fontSize: '12px' }}>
             Personal Cash Flow v{APP_VERSION}
           </div>
@@ -538,6 +628,8 @@ export function Settings() {
         initialCurrency={editAcc?.currency ?? 'AED'}
         initialType={editAcc?.type ?? 'cash'}
         editing={editAcc}
+        availableCurrencies={enabledCurrencies}
+        existingWallets={existingWallets}
       />
       <AddCategory
         open={addCatOpen}

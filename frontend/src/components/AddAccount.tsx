@@ -15,6 +15,8 @@ interface AddAccountProps {
   initialCurrency?: Currency
   initialType?: AccountType
   editing?: Account | null
+  availableCurrencies?: string[]
+  existingWallets?: string[]
 }
 
 interface AddAccountForm {
@@ -25,6 +27,7 @@ interface AddAccountForm {
   creditLimit: string
   openingUtilized: string
   multiCurrency: boolean
+  wallet: string
 }
 
 const TYPE_OPTIONS = [
@@ -33,15 +36,13 @@ const TYPE_OPTIONS = [
   { value: 'debit_card', label: 'Debit Card' },
 ]
 
-const CURRENCY_OPTIONS = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'QAR', 'PKR'].map((c) => ({
-  value: c,
-  label: c,
-}))
 
 function toDisplayAmount(minor: number | undefined, currency: string): string {
   if (!minor) return ''
   return formatAmount(minor, currency)
 }
+
+const DEFAULT_CURRENCIES = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'QAR', 'PKR']
 
 function defaultForm(currency: Currency, type: AccountType, editing?: Account | null): AddAccountForm {
   if (editing) {
@@ -53,15 +54,18 @@ function defaultForm(currency: Currency, type: AccountType, editing?: Account | 
       creditLimit: toDisplayAmount(editing.credit_limit, editing.currency),
       openingUtilized: toDisplayAmount(editing.opening_utilized, editing.currency),
       multiCurrency: editing.multi_currency ?? false,
+      wallet: editing.wallet ?? '',
     }
   }
-  return { name: '', type, currency, openingBalance: '', creditLimit: '', openingUtilized: '', multiCurrency: false }
+  return { name: '', type, currency, openingBalance: '', creditLimit: '', openingUtilized: '', multiCurrency: false, wallet: '' }
 }
 
-export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType = 'cash', editing }: AddAccountProps) {
+export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType = 'cash', editing, availableCurrencies, existingWallets = [] }: AddAccountProps) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const isMobile = window.matchMedia('(max-width: 768px)').matches
+  const currencyList = availableCurrencies && availableCurrencies.length > 0 ? availableCurrencies : DEFAULT_CURRENCIES
+  const CURRENCY_OPTIONS = currencyList.map((c) => ({ value: c, label: c }))
 
   const [form, setForm] = useState<AddAccountForm>(defaultForm(initialCurrency, initialType, editing))
   const [errors, setErrors] = useState<Partial<Record<keyof AddAccountForm, string>>>({})
@@ -110,6 +114,7 @@ export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType
         type: form.type,
         currency: form.currency,
         multi_currency: form.multiCurrency,
+        wallet: form.wallet.trim() || null,
       }
 
       if (form.type === 'credit_card') {
@@ -167,6 +172,26 @@ export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType
           placeholder="e.g. ADCB Credit Card"
           autoFocus
         />
+
+        {/* Wallet/card group — type to create new, or pick existing */}
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
+            Card / Wallet (optional)
+          </label>
+          <input
+            list="wallet-options"
+            value={form.wallet}
+            onChange={(e) => set('wallet', e.target.value)}
+            placeholder="e.g. HSBC Global Money"
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }}
+          />
+          <datalist id="wallet-options">
+            {existingWallets.map((w) => <option key={w} value={w} />)}
+          </datalist>
+          <span style={{ fontSize: '11px', opacity: 0.5, marginTop: '4px', display: 'block' }}>
+            Group currency pockets under the same card name
+          </span>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Select
