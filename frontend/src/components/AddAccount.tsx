@@ -174,24 +174,18 @@ export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType
         />
 
         {/* Wallet/card group — type to create new, or pick existing */}
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>
-            Card / Wallet (optional)
-          </label>
-          <input
-            list="wallet-options"
-            value={form.wallet}
-            onChange={(e) => set('wallet', e.target.value)}
-            placeholder="e.g. HSBC Global Money"
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', boxSizing: 'border-box' }}
-          />
-          <datalist id="wallet-options">
-            {existingWallets.map((w) => <option key={w} value={w} />)}
-          </datalist>
-          <span style={{ fontSize: '11px', opacity: 0.5, marginTop: '4px', display: 'block' }}>
-            Group currency pockets under the same card name
-          </span>
-        </div>
+        <Input
+          label="Card / Wallet (optional)"
+          type="text"
+          value={form.wallet}
+          onChange={(e) => set('wallet', e.target.value)}
+          placeholder="e.g. HSBC Global Money"
+          hint="Group currency pockets under the same card name"
+          list="wallet-options"
+        />
+        <datalist id="wallet-options">
+          {existingWallets.map((w) => <option key={w} value={w} />)}
+        </datalist>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Select
