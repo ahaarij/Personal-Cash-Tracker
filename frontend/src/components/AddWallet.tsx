@@ -136,13 +136,13 @@ export function AddWallet({ open, onClose, availableCurrencies, existingWalletNa
                 style={{
                   padding: '6px 14px',
                   borderRadius: '100px',
-                  border: '1px solid var(--border)',
-                  background: selected.has(c) ? 'var(--accent)' : 'var(--surface)',
-                  color: selected.has(c) ? '#fff' : 'var(--text)',
+                  border: `1px solid ${selected.has(c) ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: selected.has(c) ? 'var(--color-accent)' : 'var(--color-surface)',
+                  color: selected.has(c) ? 'var(--color-accent-text)' : 'var(--color-text)',
                   fontSize: '13px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  transition: 'background 120ms, color 120ms',
+                  transition: 'background 120ms, color 120ms, border-color 120ms',
                 }}
               >
                 {c}
