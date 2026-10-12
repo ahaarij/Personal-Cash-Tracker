@@ -275,10 +275,19 @@ app.delete('/:collection/records/:id', async (c) => {
   const userId = c.get('userId')
   const id = c.req.param('id')
 
-  const result = await sql.unsafe(
-    `DELETE FROM ${collection} WHERE id = $1 AND owner = $2 RETURNING id`,
-    [id, userId],
-  ) as Row[]
+  let result: Row[]
+  try {
+    result = await sql.unsafe(
+      `DELETE FROM ${collection} WHERE id = $1 AND owner = $2 RETURNING id`,
+      [id, userId],
+    ) as Row[]
+  } catch (err: unknown) {
+    // FK violation — another table references this row (e.g. transactions → accounts)
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: string }).code === '23503') {
+      return c.json({ message: 'This account has linked transactions and cannot be deleted. Archive it instead, or remove its transactions first.' }, 409)
+    }
+    throw err
+  }
 
   if (result.length === 0) return c.json({ message: 'Not found' }, 404)
   auditLog(userId, `${collection}.delete`, id)

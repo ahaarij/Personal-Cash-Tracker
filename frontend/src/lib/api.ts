@@ -194,7 +194,10 @@ class CollectionService<T extends { id: string } = Record<string, unknown> & { i
 
   async delete(id: string): Promise<void> {
     const res = await apiFetch(this.url(id), { method: 'DELETE' })
-    if (!res.ok) throw Object.assign(new Error('Delete failed'), { status: res.status })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { message?: string }
+      throw Object.assign(new Error(body.message ?? 'Delete failed'), { status: res.status })
+    }
   }
 
   // Polling-based replacement for PocketBase realtime subscribe

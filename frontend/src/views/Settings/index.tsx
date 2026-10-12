@@ -243,7 +243,7 @@ export function Settings() {
   const deleteAcc = useMutation({
     mutationFn: (acc: Account) => accCollection.delete(acc.id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounts'] }); toast.show({ type: 'success', message: 'Account deleted.' }) },
-    onError: () => toast.show({ type: 'error', message: 'Could not delete account.' }),
+    onError: (e: Error) => toast.show({ type: 'error', message: e.message.includes('linked transactions') ? 'Account has linked transactions — archive it instead.' : 'Could not delete account.' }),
   })
 
   const deleteCat = useMutation({
