@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Settings, Eye, EyeOff, Plus } from 'lucide-react'
 import { AccountTile } from '@/components/AccountTile'
+import { WalletCard } from '@/components/WalletCard'
 import { AccountDetailModal } from '@/components/AccountDetailModal'
 import '@/components/AccountDetailModal.css'
 import { Button } from '@/components/ui/Button'
-import { accounts as accountsCollection, transactions as txCollection } from '@/lib/api'
-import { buildCurrencyGroups } from '@/lib/balance'
+import { accounts as accountsCollection, transactions as txCollection, getFxRates } from '@/lib/api'
+import { buildCurrencyGroups, buildWalletGroups } from '@/lib/balance'
 import { useHideBalances } from '@/hooks/useHideBalances'
 import { useCurrencyOrder } from '@/hooks/useCurrencyOrder'
 import type { Account, AccountType, Currency } from '@/types'
@@ -32,11 +33,20 @@ export function MasterSheet({ onAddTransaction, onAddAccount }: MasterSheetProps
     queryFn: () => txCollection.getFullList({ filter: 'deleted=false', sort: '-date' }),
   })
 
-  // Derive currencies from actual accounts (deduplicated)
-  const knownCurrencies: string[] = [...new Set((accounts ?? []).map((a) => a.currency))]
+  const { data: fxRates } = useQuery({
+    queryKey: ['fx-rates'],
+    queryFn: getFxRates,
+    staleTime: 6 * 60 * 60 * 1000,
+    retry: false,
+  })
+
+  // Derive currencies from non-wallet accounts only (wallet pockets excluded from grid)
+  const nonWalletAccounts = (accounts ?? []).filter((a) => !a.wallet)
+  const knownCurrencies: string[] = [...new Set(nonWalletAccounts.map((a) => a.currency))]
   const { orderedCurrencies } = useCurrencyOrder(knownCurrencies)
 
   const currencyGroups = buildCurrencyGroups(accounts ?? [], txs ?? [], orderedCurrencies)
+  const walletGroups = buildWalletGroups(accounts ?? [], txs ?? [], fxRates ?? null)
 
   const isLoading = accountsLoading
 
@@ -68,8 +78,25 @@ export function MasterSheet({ onAddTransaction, onAddAccount }: MasterSheetProps
         </div>
       </header>
 
+      {/* Wallet cards section */}
+      {walletGroups.length > 0 && (
+        <div className="master-sheet__wallets">
+          <div className="master-sheet__section-label">Cards</div>
+          <div className="master-sheet__wallet-list">
+            {walletGroups.map((w) => (
+              <WalletCard
+                key={w.name}
+                wallet={w}
+                hideBalances={hideBalances}
+                onPocketClick={setSelectedAccount}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Empty state when no accounts */}
-      {!isLoading && orderedCurrencies.length === 0 && (
+      {!isLoading && orderedCurrencies.length === 0 && walletGroups.length === 0 && (
         <div className="master-sheet__empty">
           <p>No accounts yet.</p>
           <p className="master-sheet__empty-hint">Go to Settings to add your bank cards and cash wallets.</p>

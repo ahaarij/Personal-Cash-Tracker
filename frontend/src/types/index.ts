@@ -124,6 +124,8 @@ export interface AccountBalance {
   balance: number;
   /** Credit only: remaining limit (limit - utilized) */
   remaining?: number;
+  /** Balance converted to AED minor units using live FX rates. Undefined if rates unavailable. */
+  aedEquivalent?: number;
 }
 
 export interface CurrencyGroup {
@@ -131,6 +133,14 @@ export interface CurrencyGroup {
   credit_cards: AccountBalance[];
   cash: AccountBalance[];
   debit_cards: AccountBalance[];
+}
+
+export interface WalletGroup {
+  name: string;
+  accountType: AccountType;
+  pockets: AccountBalance[];
+  /** Sum of all pocket balances in AED minor units. Null if FX rates unavailable. */
+  aedTotal: number | null;
 }
 
 /* ─── Filter types ───────────────────────────────────────────────────────── */

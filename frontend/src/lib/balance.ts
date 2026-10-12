@@ -1,4 +1,5 @@
-import type { Account, Transaction, AccountBalance, CurrencyGroup } from '@/types'
+import type { Account, Transaction, AccountBalance, CurrencyGroup, WalletGroup, AccountType } from '@/types'
+import { getMinorUnitDivisor } from '@/lib/money'
 
 /**
  * Calculates the running balance for a single account.
@@ -97,7 +98,7 @@ export function buildCurrencyGroups(
 
   return enabledCurrencies.map((currency) => {
     const currencyAccounts = accounts.filter(
-      (a) => a.currency === currency && !a.archived,
+      (a) => a.currency === currency && !a.archived && !a.wallet,
     )
     const currencyTx = transactions // we filter per account inside calculateAccountBalance
 
@@ -173,6 +174,59 @@ export function summarizeByTrip(
   }
 
   return totals
+}
+
+/**
+ * Groups wallet pocket accounts by wallet name and computes per-pocket balances
+ * plus an optional combined AED total using live FX rates.
+ *
+ * fxRates: { "USD": 0.2723, "EUR": 0.2497, ... } — rates relative to AED base
+ * (1 AED = X units of that currency, so to convert X → AED: X / rate)
+ */
+export function buildWalletGroups(
+  accounts: Account[],
+  transactions: Transaction[],
+  fxRates: Record<string, number> | null,
+): WalletGroup[] {
+  const walletAccounts = accounts.filter((a) => !a.archived && a.wallet)
+
+  const walletMap = new Map<string, Account[]>()
+  for (const a of walletAccounts) {
+    const list = walletMap.get(a.wallet!) ?? []
+    list.push(a)
+    walletMap.set(a.wallet!, list)
+  }
+
+  return [...walletMap.entries()].map(([name, accs]) => {
+    const pockets = accs
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((a) => {
+        const ab = calculateAccountBalance(a, transactions)
+        let aedEquivalent: number | undefined
+        if (fxRates) {
+          const rate = fxRates[a.currency]
+          if (rate) {
+            const major = ab.balance / getMinorUnitDivisor(a.currency)
+            aedEquivalent = Math.round((major / rate) * getMinorUnitDivisor('AED'))
+          }
+        }
+        return { ...ab, aedEquivalent }
+      })
+
+    let aedTotal: number | null = null
+    if (fxRates) {
+      const sum = pockets.reduce((acc, p) => acc + (p.aedEquivalent ?? 0), 0)
+      const allHaveRate = pockets.every((p) => p.aedEquivalent !== undefined)
+      aedTotal = allHaveRate ? sum : null
+    }
+
+    return {
+      name,
+      accountType: accs[0].type as AccountType,
+      pockets,
+      aedTotal,
+    }
+  })
 }
 
 /**

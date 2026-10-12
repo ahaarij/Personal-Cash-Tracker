@@ -237,6 +237,13 @@ export const trips = new CollectionService<Trip>('trips')
 export const settings = new CollectionService<UserSettings>('settings')
 export const auditLog = new CollectionService<AuditLogEntry>('audit_log')
 
+export async function getFxRates(): Promise<Record<string, number>> {
+  const res = await apiFetch('/fx-rates')
+  if (!res.ok) throw new Error('Could not fetch FX rates')
+  const data = await res.json() as { base: string; rates: Record<string, number> }
+  return data.rates
+}
+
 // Legacy pb shim — sync.ts calls pb.collection('name')
 export const pb = {
   collection: <T extends { id: string }>(name: string) => new CollectionService<T>(name),

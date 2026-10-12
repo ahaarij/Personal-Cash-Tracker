@@ -9,6 +9,7 @@ import { rateLimitAuth } from './middleware/rateLimit.js'
 import { securityHeaders } from './middleware/securityHeaders.js'
 import { authRoutes } from './routes/auth.js'
 import { collectionsRoutes } from './routes/collections.js'
+import { fxRoutes } from './routes/fx.js'
 
 const app = new Hono<{ Variables: { userId: string; tokenIat: number } }>()
 
@@ -36,6 +37,10 @@ app.route('/api/auth', authRoutes)
 // Data routes (require valid JWT or session cookie)
 app.use('/api/collections/*', requireAuth)
 app.route('/api/collections', collectionsRoutes)
+
+// FX rates (cached proxy, requires auth)
+app.use('/api/fx-rates', requireAuth)
+app.route('/api/fx-rates', fxRoutes)
 
 app.get('/api/health', (c) => c.json({ ok: true }))
 
