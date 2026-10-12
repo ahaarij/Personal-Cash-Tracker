@@ -75,14 +75,20 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     queryFn: () => tripsCollection.getFullList({ sort: '-start_date' }),
   })
 
-  // Focus amount on open
+  // Focus amount on open; use cached accounts to pick the best default currency immediately
   useEffect(() => {
     if (open) {
-      setForm({ ...DEFAULT_FORM, ...persistedState, date: todayISO(), amount: '' })
+      const savedCurrency = persistedState.currency ?? DEFAULT_FORM.currency
+      const available = allAccounts ?? []
+      const bestCurrency =
+        available.length > 0 && !available.some((a) => a.currency === savedCurrency || a.multi_currency)
+          ? available[0].currency
+          : savedCurrency
+      setForm({ ...DEFAULT_FORM, ...persistedState, currency: bestCurrency, date: todayISO(), amount: '' })
       setErrors({})
       setTimeout(() => amountRef.current?.focus(), 50)
     }
-  }, [open])
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcut N
   useEffect(() => {
@@ -97,13 +103,11 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
-  // Auto-correct currency if it has no matching accounts and no multi-currency accounts exist
+  // Fallback: accounts finished loading after the dialog already opened
   useEffect(() => {
-    if (!allAccounts || allAccounts.length === 0) return
+    if (!open || !allAccounts || allAccounts.length === 0) return
     const hasMatch = allAccounts.some((a) => a.currency === form.currency || a.multi_currency)
-    if (!hasMatch) {
-      setField('currency', allAccounts[0].currency)
-    }
+    if (!hasMatch) setField('currency', allAccounts[0].currency)
   }, [allAccounts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Multi-currency accounts always appear regardless of selected spend currency
