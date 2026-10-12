@@ -6,6 +6,7 @@ import { Plus, CreditCard, Wallet, Building2, Tag, Plane, Archive, Pencil, Trash
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { AddAccount } from '@/components/AddAccount'
+import { AddWallet } from '@/components/AddWallet'
 import { AddCategory } from '@/components/AddCategory'
 import { AddTrip } from '@/components/AddTrip'
 import { useConfirmDelete } from '@/hooks/useConfirmDelete'
@@ -188,6 +189,8 @@ function CurrencyDragList({ currencies, onReorder }: {
 export function Settings() {
   const [tab, setTab] = useState<Tab>('accounts')
   const [addAccOpen, setAddAccOpen] = useState(false)
+  const [addWalletOpen, setAddWalletOpen] = useState(false)
+  const [addPocketForWallet, setAddPocketForWallet] = useState<string | undefined>(undefined)
   const [newCurrencyInput, setNewCurrencyInput] = useState('')
   const [editAcc, setEditAcc] = useState<Account | null>(null)
   const [addCatOpen, setAddCatOpen] = useState(false)
@@ -330,14 +333,24 @@ export function Settings() {
         <div className="settings-section">
           <div className="settings-section__header">
             <h2 className="settings-section__title">Bank accounts &amp; cards</h2>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={14} />}
-              onClick={() => { setEditAcc(null); setAddAccOpen(true) }}
-            >
-              Add account
-            </Button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => { setAddPocketForWallet(undefined); setAddWalletOpen(true) }}
+              >
+                Add wallet
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => { setEditAcc(null); setAddAccOpen(true) }}
+              >
+                Add account
+              </Button>
+            </div>
           </div>
 
           {accLoading && <div className="settings-loading">Loading…</div>}
@@ -365,7 +378,16 @@ export function Settings() {
               <>
                 {[...walletMap.entries()].map(([walletName, accs]) => (
                   <div key={walletName}>
-                    <div className="settings-section__subtitle">{walletName}</div>
+                    <div className="settings-section__subtitle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>{walletName}</span>
+                      <button
+                        className="settings-row__icon-btn"
+                        title="Add currency pocket"
+                        onClick={() => { setAddPocketForWallet(walletName); setAddWalletOpen(true) }}
+                      >
+                        <Plus size={13} strokeWidth={1.5} />
+                      </button>
+                    </div>
                     <div className="settings-list">
                       {accs.map((acc) => <AccountRow key={acc.id} acc={acc} />)}
                     </div>
@@ -622,6 +644,12 @@ export function Settings() {
       )}
 
       {/* ── Dialogs ─────────────────────────────────────────────────────── */}
+      <AddWallet
+        open={addWalletOpen}
+        onClose={() => { setAddWalletOpen(false); setAddPocketForWallet(undefined) }}
+        availableCurrencies={enabledCurrencies}
+        existingWalletName={addPocketForWallet}
+      />
       <AddAccount
         open={addAccOpen}
         onClose={() => { setAddAccOpen(false); setEditAcc(null) }}
