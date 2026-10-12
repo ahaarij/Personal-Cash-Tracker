@@ -6,6 +6,9 @@ $ErrorActionPreference = "Stop"
 $RepoPath = $PSScriptRoot
 if (-not $RepoPath) { $RepoPath = Split-Path -Parent $MyInvocation.MyCommand.Path }
 
+# Ensure git and node are on PATH (Task Scheduler runs with a minimal environment)
+$env:PATH = "C:\Program Files\Git\cmd;C:\Program Files\Git\bin;C:\Program Files\nodejs;$env:PATH"
+
 # Ensure logs directory exists
 $LogDir = "$RepoPath\logs"
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory $LogDir | Out-Null }
