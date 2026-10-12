@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { APP_VERSION } from '@/lib/version'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, CreditCard, Wallet, Building2, Tag, Plane, Archive, Pencil, Trash2, LogOut, SlidersHorizontal, Sun, Moon, Monitor, GripVertical } from 'lucide-react'
@@ -523,6 +524,10 @@ export function Settings() {
               <CurrencyDragList currencies={orderedCurrencies} onReorder={reorder} />
             </>
           )}
+
+          <div style={{ marginTop: '24px', textAlign: 'center', opacity: 0.4, fontSize: '12px' }}>
+            Personal Cash Flow v{APP_VERSION}
+          </div>
         </div>
       )}
 

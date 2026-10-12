@@ -20,6 +20,8 @@ export interface Account {
   credit_limit?: number;
   /** For credit cards: initial utilized amount at account creation (minor units) */
   opening_utilized?: number;
+  /** Wise/Revolut-style: card can be charged in any currency, balance tracked in home currency */
+  multi_currency?: boolean;
   archived: boolean;
   sort_order: number;
   created: string;
@@ -45,6 +47,10 @@ export interface Transaction {
   transfer_pair_id?: string;
   /** Direction this leg flows relative to its account */
   transfer_direction?: TransferDirection;
+  /** For multi-currency account transactions: original spend currency */
+  fx_currency?: string;
+  /** For multi-currency account transactions: original spend amount in minor units */
+  fx_amount?: number;
   /** Client-generated UUID for offline idempotency */
   client_id: string;
   /** Soft delete */
@@ -202,4 +208,5 @@ export interface AddTransactionForm {
   transferDestinationAccount?: string;
   receivedAmount?: string; // for cross-currency transfers
   exchangeRate?: string;   // rate applied when cross-currency
+  homeAmount?: string;     // for multi-currency account: amount charged in account's home currency
 }

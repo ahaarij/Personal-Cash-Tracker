@@ -24,6 +24,7 @@ interface AddAccountForm {
   openingBalance: string
   creditLimit: string
   openingUtilized: string
+  multiCurrency: boolean
 }
 
 const TYPE_OPTIONS = [
@@ -51,9 +52,10 @@ function defaultForm(currency: Currency, type: AccountType, editing?: Account | 
       openingBalance: toDisplayAmount(editing.opening_balance, editing.currency),
       creditLimit: toDisplayAmount(editing.credit_limit, editing.currency),
       openingUtilized: toDisplayAmount(editing.opening_utilized, editing.currency),
+      multiCurrency: editing.multi_currency ?? false,
     }
   }
-  return { name: '', type, currency, openingBalance: '', creditLimit: '', openingUtilized: '' }
+  return { name: '', type, currency, openingBalance: '', creditLimit: '', openingUtilized: '', multiCurrency: false }
 }
 
 export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType = 'cash', editing }: AddAccountProps) {
@@ -107,6 +109,7 @@ export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType
         name: form.name.trim(),
         type: form.type,
         currency: form.currency,
+        multi_currency: form.multiCurrency,
       }
 
       if (form.type === 'credit_card') {
@@ -181,6 +184,25 @@ export function AddAccount({ open, onClose, initialCurrency = 'AED', initialType
             disabled={!!editing}
           />
         </div>
+
+        {/* Multi-currency toggle — not for credit cards (could add later) */}
+        {form.type !== 'credit_card' && (
+          <label className="add-tx-form__toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={form.multiCurrency}
+              onChange={(e) => set('multiCurrency', e.target.checked)}
+              className="add-tx-form__toggle"
+              disabled={!!editing}
+            />
+            <span>
+              Multi-currency card
+              <span style={{ display: 'block', fontSize: '12px', opacity: 0.6, fontWeight: 400 }}>
+                Wise, Revolut — spends in any currency, balance in {form.currency}
+              </span>
+            </span>
+          </label>
+        )}
 
         {form.type === 'credit_card' ? (
           <>

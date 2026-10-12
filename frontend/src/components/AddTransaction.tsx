@@ -97,17 +97,24 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
-  // Auto-correct currency if it has no matching accounts (e.g. first open defaults to AED but user has USD accounts)
+  // Auto-correct currency if it has no matching accounts and no multi-currency accounts exist
   useEffect(() => {
     if (!allAccounts || allAccounts.length === 0) return
-    const hasMatch = allAccounts.some((a) => a.currency === form.currency)
+    const hasMatch = allAccounts.some((a) => a.currency === form.currency || a.multi_currency)
     if (!hasMatch) {
       setField('currency', allAccounts[0].currency)
     }
   }, [allAccounts]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Multi-currency accounts always appear regardless of selected spend currency
   const filteredAccounts = (allAccounts ?? []).filter(
-    (a) => a.currency === form.currency,
+    (a) => a.currency === form.currency || a.multi_currency,
+  )
+
+  const selectedAccount = (allAccounts ?? []).find((a) => a.id === form.account)
+  // Multi-currency: spending in a different currency than the account's home currency
+  const isMultiCurrencyFX = !!(
+    selectedAccount?.multi_currency && form.currency !== selectedAccount.currency
   )
 
   // Destination can be any account (cross-currency transfers supported)
@@ -180,6 +187,14 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     }
 
     if (!form.account) next.account = 'Select an account.'
+
+    if (isMultiCurrencyFX) {
+      const home = parseAmount(form.homeAmount ?? '', selectedAccount!.currency)
+      if (!form.homeAmount?.trim() || home === null || home <= 0) {
+        next.homeAmount = 'Enter the amount charged to the card.'
+      }
+    }
+
     if (form.type !== 'transfer' && !form.category) next.category = 'Select a category.'
     if (form.type === 'transfer' && !form.transferDestinationAccount) {
       next.transferDestinationAccount = 'Select a destination account.'
@@ -201,24 +216,29 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     mutationFn: async () => {
       if (!validate()) throw new Error('Validation failed')
 
-      const amount = parseAmount(form.amount, form.currency)!
+      // For multi-currency FX: deduct homeAmount from card; store original spend as fx_*
+      const fxAmount = isMultiCurrencyFX ? parseAmount(form.amount, form.currency) : null
+      const homeAmt = isMultiCurrencyFX
+        ? parseAmount(form.homeAmount ?? '', selectedAccount!.currency)!
+        : parseAmount(form.amount, form.currency)!
       const pairId = form.type === 'transfer' ? uuidv4() : undefined
 
-      const baseData = {
+      const baseData: Record<string, unknown> = {
         date: form.date,
-        amount,
+        amount: homeAmt,
         account: form.account,
         type: form.type,
         category: form.type !== 'transfer' ? form.category || undefined : undefined,
         note: form.note.trim(),
         trip: form.isTravel ? form.trip || undefined : undefined,
         deleted: false,
+        ...(isMultiCurrencyFX && { fx_currency: form.currency, fx_amount: fxAmount }),
       }
 
       if (form.type === 'transfer') {
         const inAmount = isCrossCurrency && form.receivedAmount
           ? parseAmount(form.receivedAmount, destAccount!.currency)!
-          : amount
+          : homeAmt
         await txCollection.create({ ...baseData, transfer_pair_id: pairId, transfer_direction: 'out', client_id: uuidv4() })
         await txCollection.create({ ...baseData, amount: inAmount, account: form.transferDestinationAccount!, transfer_pair_id: pairId, transfer_direction: 'in', client_id: uuidv4() })
       } else {
@@ -246,7 +266,6 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     },
   })
 
-  const selectedAccount = (allAccounts ?? []).find((a) => a.id === form.account)
   const isCreditCard = selectedAccount?.type === 'credit_card'
 
   // Credit cards don't accept income — payments go via Transfer
@@ -267,7 +286,10 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
 
   const accountOptions = filteredAccounts.map((a) => ({
     value: a.id,
-    label: a.name,
+    // Show home currency tag for multi-currency accounts so user knows what balance is deducted
+    label: a.multi_currency && a.currency !== form.currency
+      ? `${a.name} (${a.currency})`
+      : a.name,
   }))
 
   const destAccountOptions = filteredDestAccounts.map((a) => ({
@@ -366,6 +388,23 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
           error={errors.account}
           placeholder="Select account"
         />
+
+        {/* Multi-currency FX: show what the card actually charges in home currency */}
+        {isMultiCurrencyFX && (
+          <Input
+            label={`Charged to card (${selectedAccount!.currency})`}
+            inputMode="decimal"
+            type="text"
+            value={form.homeAmount ?? ''}
+            onChange={(e) => {
+              const { formatted } = liveFormatAmount(e.target.value, selectedAccount!.currency)
+              setField('homeAmount', formatted)
+            }}
+            error={(errors as Record<string, string>).homeAmount}
+            autoComplete="off"
+            placeholder={`0.00 ${selectedAccount!.currency}`}
+          />
+        )}
 
         {/* Transfer destination */}
         {form.type === 'transfer' && (

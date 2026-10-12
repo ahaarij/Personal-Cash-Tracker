@@ -174,6 +174,7 @@ export function ExpensesSheet({}: ExpensesSheetProps) {
         const currency = acc?.currency ?? ''
         const isExpense = t.type === 'expense'
         const isTransfer = t.type === 'transfer'
+        const sign = isExpense || (isTransfer && t.transfer_direction === 'out') ? '−' : '+'
         return (
           <span className={`money balance-value ${
             isExpense ? 'money-negative'
@@ -181,8 +182,10 @@ export function ExpensesSheet({}: ExpensesSheetProps) {
             : 'money-positive'
           }`}>
             {isTransfer && <span className="tx-transfer-badge">Transfer</span>}
-            {isExpense || (isTransfer && t.transfer_direction === 'out') ? '−' : '+'}
-            {formatAmount(t.amount, currency)}
+            {sign}{formatAmount(t.amount, currency)}
+            {t.fx_currency && t.fx_amount != null && (
+              <span className="tx-fx-hint"> ({t.fx_currency} {formatAmount(t.fx_amount, t.fx_currency)})</span>
+            )}
           </span>
         )
       },

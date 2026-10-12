@@ -87,6 +87,11 @@ export async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS transactions_date  ON transactions(date)`
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS transactions_client_id ON transactions(client_id)`
 
+  // v1.1 — multi-currency accounts + FX transaction fields
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS multi_currency BOOLEAN NOT NULL DEFAULT false`
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS fx_currency TEXT`
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS fx_amount BIGINT`
+
   await sql`
     CREATE TABLE IF NOT EXISTS settings (
       id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

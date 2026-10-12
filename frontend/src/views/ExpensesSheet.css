@@ -150,3 +150,9 @@
   font-style: normal;
 }
 
+.tx-fx-hint {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-left: 4px;
+}
+
