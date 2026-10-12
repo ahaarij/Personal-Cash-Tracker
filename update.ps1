@@ -1,4 +1,4 @@
-# ── Cash Flow App — Auto-Update Script ───────────────────────────────────────
+# Cash Flow App - Auto-Update Script
 # Called by Task Scheduler every 5 minutes.
 # Pulls latest code from GitHub; rebuilds and restarts services only if changed.
 
@@ -31,7 +31,7 @@ if ($pullExit -ne 0) {
 }
 
 if ($before -eq $after) {
-    # Heartbeat — confirms Task Scheduler is running even when there are no changes
+    # Heartbeat - confirms Task Scheduler is running even when there are no changes
     Log "No changes (HEAD=$after)"
     exit 0
 }
@@ -55,7 +55,7 @@ if (-not $nssmExe) {
 }
 
 if (-not $nssmExe) {
-    Log "WARNING: nssm.exe not found — services will NOT be restarted after this build"
+    Log "WARNING: nssm.exe not found - services will NOT be restarted after this build"
 }
 
 try {
