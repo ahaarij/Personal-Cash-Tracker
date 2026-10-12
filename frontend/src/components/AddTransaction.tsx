@@ -97,6 +97,15 @@ export function AddTransaction({ open, onClose }: AddTransactionProps) {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
+  // Auto-correct currency if it has no matching accounts (e.g. first open defaults to AED but user has USD accounts)
+  useEffect(() => {
+    if (!allAccounts || allAccounts.length === 0) return
+    const hasMatch = allAccounts.some((a) => a.currency === form.currency)
+    if (!hasMatch) {
+      setField('currency', allAccounts[0].currency)
+    }
+  }, [allAccounts]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const filteredAccounts = (allAccounts ?? []).filter(
     (a) => a.currency === form.currency,
   )
