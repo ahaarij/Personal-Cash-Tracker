@@ -275,6 +275,14 @@ app.delete('/:collection/records/:id', async (c) => {
   const userId = c.get('userId')
   const id = c.req.param('id')
 
+  // For accounts: hard-delete all linked transactions first (including soft-deleted ones)
+  if (collection === 'accounts') {
+    await sql.unsafe(
+      `DELETE FROM transactions WHERE account = $1 AND owner = $2`,
+      [id, userId],
+    )
+  }
+
   let result: Row[]
   try {
     result = await sql.unsafe(
@@ -282,7 +290,6 @@ app.delete('/:collection/records/:id', async (c) => {
       [id, userId],
     ) as Row[]
   } catch (err: unknown) {
-    // FK violation — another table references this row (e.g. transactions → accounts)
     if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: string }).code === '23503') {
       return c.json({ message: 'This account has linked transactions and cannot be deleted. Archive it instead, or remove its transactions first.' }, 409)
     }

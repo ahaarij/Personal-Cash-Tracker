@@ -19,10 +19,12 @@ const TYPE_BADGE: Record<string, string> = {
 export function WalletCard({ wallet, hideBalances, onPocketClick }: WalletCardProps) {
   const [expanded, setExpanded] = useState(false)
 
+  // Round to nearest whole dirham — FX totals are approximate (≈ shown in label)
+  const aedTotalRounded = wallet.aedTotal != null ? Math.round(wallet.aedTotal / 100) * 100 : null
   const totalDisplay = hideBalances
     ? '••••'
-    : wallet.aedTotal != null
-      ? formatAmount(wallet.aedTotal, 'AED')
+    : aedTotalRounded != null
+      ? formatAmount(aedTotalRounded, 'AED')
       : '—'
 
   return (
