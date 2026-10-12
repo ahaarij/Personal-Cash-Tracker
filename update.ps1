@@ -2,7 +2,6 @@
 # Called by Task Scheduler every 5 minutes.
 # Pulls latest code from GitHub; rebuilds and restarts services only if changed.
 
-$ErrorActionPreference = "Stop"
 $RepoPath = $PSScriptRoot
 if (-not $RepoPath) { $RepoPath = Split-Path -Parent $MyInvocation.MyCommand.Path }
 
@@ -23,13 +22,13 @@ Set-Location $RepoPath
 
 $before = git rev-parse HEAD 2>$null
 
-# Pull and capture any errors for logging
-$pullResult = git pull origin main 2>&1
+git pull origin main --quiet 2>$null
 $pullExit = $LASTEXITCODE
+
 $after = git rev-parse HEAD 2>$null
 
 if ($pullExit -ne 0) {
-    Log "ERROR: git pull failed (exit $pullExit): $pullResult"
+    Log "ERROR: git pull failed (exit $pullExit) - check credentials/network"
     exit 1
 }
 
@@ -63,13 +62,15 @@ if (-not $nssmExe) {
 
 try {
     Set-Location "$RepoPath\frontend"
-    npm install --silent 2>&1 | Out-Null
-    npm run build 2>&1 | Out-Null
+    npm install --silent 2>$null
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
     Log "Frontend build OK."
 
     Set-Location "$RepoPath\backend"
-    npm install --silent 2>&1 | Out-Null
-    npm run build 2>&1 | Out-Null
+    npm install --silent 2>$null
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "Backend build failed" }
     Log "Backend build OK."
 
     Set-Location $RepoPath
@@ -80,7 +81,7 @@ try {
         Log "Services restarted."
     }
 
-    Log "Deploy complete (v$after)."
+    Log "Deploy complete."
 } catch {
     Log "ERROR during build/restart: $_"
 }
