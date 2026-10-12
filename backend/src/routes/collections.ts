@@ -42,7 +42,7 @@ async function validateTransaction(body: Record<string, unknown>, userId: string
   if (accountId) {
     const [acc] = await sql.unsafe(
       `SELECT id FROM accounts WHERE id = $1 AND owner = $2`,
-      [accountId, userId],
+      [accountId as string, userId],
     ) as Row[]
     if (!acc) return 'account not found or not owned by you'
   }
@@ -52,7 +52,7 @@ async function validateTransaction(body: Record<string, unknown>, userId: string
   if (categoryId) {
     const [cat] = await sql.unsafe(
       `SELECT id FROM categories WHERE id = $1 AND owner = $2`,
-      [categoryId, userId],
+      [categoryId as string, userId],
     ) as Row[]
     if (!cat) return 'category not found or not owned by you'
   }
