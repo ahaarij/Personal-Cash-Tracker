@@ -240,6 +240,12 @@ export function Settings() {
     onError: () => toast.show({ type: 'error', message: 'Could not update account.' }),
   })
 
+  const deleteAcc = useMutation({
+    mutationFn: (acc: Account) => accCollection.delete(acc.id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounts'] }); toast.show({ type: 'success', message: 'Account deleted.' }) },
+    onError: () => toast.show({ type: 'error', message: 'Could not delete account.' }),
+  })
+
   const deleteCat = useMutation({
     mutationFn: (cat: Category) => catCollection.delete(cat.id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); toast.show({ type: 'success', message: 'Category deleted.' }) },
@@ -282,13 +288,15 @@ export function Settings() {
           <span className="settings-row__meta">{TYPE_LABEL[acc.type]} · {acc.currency}{acc.wallet ? ` · ${acc.wallet}` : ''}</span>
         </div>
         <div className="settings-row__actions">
-          <button
-            className="settings-row__icon-btn"
-            title="Edit"
-            onClick={() => { setEditAcc(acc); setAddAccOpen(true) }}
-          >
-            <Pencil size={14} strokeWidth={1.5} />
-          </button>
+          {!acc.archived && (
+            <button
+              className="settings-row__icon-btn"
+              title="Edit"
+              onClick={() => { setEditAcc(acc); setAddAccOpen(true) }}
+            >
+              <Pencil size={14} strokeWidth={1.5} />
+            </button>
+          )}
           <button
             className="settings-row__icon-btn"
             title={acc.archived ? 'Unarchive' : 'Archive'}
@@ -296,6 +304,15 @@ export function Settings() {
           >
             <Archive size={14} strokeWidth={1.5} />
           </button>
+          {acc.archived && (
+            <button
+              className="settings-row__icon-btn settings-row__icon-btn--danger"
+              title="Delete permanently"
+              onClick={() => { if (window.confirm(`Permanently delete "${acc.name}"? This cannot be undone.`)) deleteAcc.mutate(acc) }}
+            >
+              <Trash2 size={14} strokeWidth={1.5} />
+            </button>
+          )}
         </div>
       </div>
     )

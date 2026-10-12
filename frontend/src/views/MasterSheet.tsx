@@ -78,24 +78,7 @@ export function MasterSheet({ onAddTransaction, onAddAccount }: MasterSheetProps
         </div>
       </header>
 
-      {/* Wallet cards section */}
-      {walletGroups.length > 0 && (
-        <div className="master-sheet__wallets">
-          <div className="master-sheet__section-label">Cards</div>
-          <div className="master-sheet__wallet-list">
-            {walletGroups.map((w) => (
-              <WalletCard
-                key={w.name}
-                wallet={w}
-                hideBalances={hideBalances}
-                onPocketClick={setSelectedAccount}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state when no accounts */}
+      {/* Empty state */}
       {!isLoading && orderedCurrencies.length === 0 && walletGroups.length === 0 && (
         <div className="master-sheet__empty">
           <p>No accounts yet.</p>
@@ -103,52 +86,73 @@ export function MasterSheet({ onAddTransaction, onAddAccount }: MasterSheetProps
         </div>
       )}
 
-      {/* Column headers */}
-      {(isLoading || orderedCurrencies.length > 0) && (
+      {/* Currency grid + wallet column side by side */}
+      {(isLoading || orderedCurrencies.length > 0 || walletGroups.length > 0) && (
       <div className="master-sheet__grid-wrapper">
-        <div className="master-sheet__grid" role="table" aria-label="Cash flow overview">
-          <div className="master-sheet__col-headers" role="row">
-            <div className="master-sheet__currency-col" role="columnheader">
-              <span className="sr-only">Currency</span>
-            </div>
-            <div className="master-sheet__col-header" role="columnheader">C.C</div>
-            <div className="master-sheet__col-header" role="columnheader">Cash</div>
-            <div className="master-sheet__col-header" role="columnheader">D.C</div>
-          </div>
 
-          {isLoading && (
-            <div className="master-sheet__loading" aria-busy="true" aria-label="Loading balances">
-              {knownCurrencies.map((currency) => (
-                <div key={currency} className="master-sheet__row" role="row">
-                  <div className="master-sheet__currency-label" role="rowheader">
-                    {currency}
+        {/* Scrollable currency × type grid */}
+        {(isLoading || orderedCurrencies.length > 0) && (
+        <div className="master-sheet__grid-scroll">
+          <div className="master-sheet__grid" role="table" aria-label="Cash flow overview">
+            <div className="master-sheet__col-headers" role="row">
+              <div className="master-sheet__currency-col" role="columnheader">
+                <span className="sr-only">Currency</span>
+              </div>
+              <div className="master-sheet__col-header" role="columnheader">C.C</div>
+              <div className="master-sheet__col-header" role="columnheader">Cash</div>
+              <div className="master-sheet__col-header" role="columnheader">D.C</div>
+            </div>
+
+            {isLoading && (
+              <div className="master-sheet__loading" aria-busy="true" aria-label="Loading balances">
+                {knownCurrencies.map((currency) => (
+                  <div key={currency} className="master-sheet__row" role="row">
+                    <div className="master-sheet__currency-label" role="rowheader">{currency}</div>
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="skeleton master-sheet__tile-skeleton" role="cell" />
+                    ))}
                   </div>
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="skeleton master-sheet__tile-skeleton" role="cell" />
-                  ))}
+                ))}
+              </div>
+            )}
+
+            {!isLoading && currencyGroups.map(({ currency, credit_cards, cash, debit_cards }) => (
+              <div key={currency} className="master-sheet__row" role="row">
+                <div className="master-sheet__currency-label" role="rowheader">
+                  <span aria-label={`Currency: ${currency}`}>{currency}</span>
                 </div>
+                <div role="cell">
+                  <AccountTile balances={credit_cards} currency={currency} accountType="credit_card" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'credit_card')} onCardClick={setSelectedAccount} />
+                </div>
+                <div role="cell">
+                  <AccountTile balances={cash} currency={currency} accountType="cash" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'cash')} onCardClick={setSelectedAccount} />
+                </div>
+                <div role="cell">
+                  <AccountTile balances={debit_cards} currency={currency} accountType="debit_card" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'debit_card')} onCardClick={setSelectedAccount} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        )}
+
+        {/* Wallet / multi-currency card column */}
+        {walletGroups.length > 0 && (
+          <div className="master-sheet__wallet-col">
+            <div className="master-sheet__wallet-col-header">Cards</div>
+            <div className="master-sheet__wallet-col-list">
+              {walletGroups.map((w) => (
+                <WalletCard
+                  key={w.name}
+                  wallet={w}
+                  hideBalances={hideBalances}
+                  onPocketClick={setSelectedAccount}
+                />
               ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {!isLoading && currencyGroups.map(({ currency, credit_cards, cash, debit_cards }) => (
-            <div key={currency} className="master-sheet__row" role="row">
-              <div className="master-sheet__currency-label" role="rowheader">
-                <span aria-label={`Currency: ${currency}`}>{currency}</span>
-              </div>
-
-              <div role="cell">
-                <AccountTile balances={credit_cards} currency={currency} accountType="credit_card" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'credit_card')} onCardClick={setSelectedAccount} />
-              </div>
-              <div role="cell">
-                <AccountTile balances={cash} currency={currency} accountType="cash" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'cash')} onCardClick={setSelectedAccount} />
-              </div>
-              <div role="cell">
-                <AccountTile balances={debit_cards} currency={currency} accountType="debit_card" hideBalances={hideBalances} onAddAccount={() => onAddAccount(currency, 'debit_card')} onCardClick={setSelectedAccount} />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
       )}
 
