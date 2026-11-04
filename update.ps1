@@ -17,6 +17,7 @@ function Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Add-Content $LogFile "[$ts] $msg"
 }
+. "$PSScriptRoot\notify.ps1"
 
 Set-Location $RepoPath
 
@@ -82,6 +83,8 @@ try {
     }
 
     Log "Deploy complete."
+    Send-WhatsApp "[Cash Flow App] Deployed $($before.Substring(0,7)) -> $($after.Substring(0,7)) on $env:COMPUTERNAME"
 } catch {
     Log "ERROR during build/restart: $_"
+    Send-WhatsApp "[Cash Flow App] Build FAILED on $env:COMPUTERNAME: $_"
 }
